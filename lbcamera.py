@@ -6,8 +6,10 @@
 # Size of source mod 2**32: 238 bytes
 from LBBridge import log
 from LBBridge import config
-log.init_logger('lbcamera')
+
+log.init_logger("lbcamera")
 from LBBridge import camera
+
 
 def main():
     cfg = config.Config()
@@ -15,5 +17,5 @@ def main():
     serv.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

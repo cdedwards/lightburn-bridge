@@ -5,7 +5,9 @@
 # Compiled at: 2021-09-13 10:26:38
 # Size of source mod 2**32: 128 bytes
 from LBBridge import log
-log.init_logger('lbwebdash')
+
+log.init_logger("lbwebdash")
 from LBBridge import webdash
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     webdash.run()

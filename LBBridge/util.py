@@ -10,20 +10,24 @@ from subprocess import Popen
 import shlex, os
 from . import log
 
+
 def shell_split(cmd, args, cwd=None, show_output=False):
     if cwd is None:
         cwd = os.getcwd()
     if show_output:
         log.info(f"Running: {cmd} {' '.join(args)}")
-    process = Popen(([cmd] + args), shell=False,
-      stdout=(subprocess.PIPE),
-      stderr=(subprocess.STDOUT),
-      cwd=cwd)
-    output = ''
+    process = Popen(
+        ([cmd] + args),
+        shell=False,
+        stdout=(subprocess.PIPE),
+        stderr=(subprocess.STDOUT),
+        cwd=cwd,
+    )
+    output = ""
     while process.poll() is None:
-        line = ''
+        line = ""
         try:
-            line = process.stdout.readline().decode('ascii')
+            line = process.stdout.readline().decode("ascii")
         except:
             pass
 
@@ -34,13 +38,13 @@ def shell_split(cmd, args, cwd=None, show_output=False):
                 log.info(f"$> {line}")
 
     stdout, _ = process.communicate()
-    line = ''
+    line = ""
     try:
-        line = stdout.decode('ascii')
+        line = stdout.decode("ascii")
     except:
         pass
 
-    if line != '':
+    if line != "":
         output += line
         if show_output:
             line = line.rstrip()

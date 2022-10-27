@@ -8,8 +8,8 @@ import cv2, socket, select, signal, threading, time
 from . import log
 from turbojpeg import TurboJPEG
 
-class WebCam:
 
+class WebCam:
     def __init__(self, index=-1, thumb_scale=(1, 4), thumb_qual=70):
         self.index = index
         self.thumb_scale = thumb_scale
@@ -17,19 +17,19 @@ class WebCam:
         self.cap = cv2.VideoCapture(self.index)
         self.last_frame = None
         self.jpeg = TurboJPEG()
-        log.info('Using MJPG mode')
-        fourcc = (cv2.VideoWriter_fourcc)(*'MJPG')
+        log.info("Using MJPG mode")
+        fourcc = (cv2.VideoWriter_fourcc)(*"MJPG")
         self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
         new_fourcc = self.cap.get(cv2.CAP_PROP_FOURCC)
         if new_fourcc != fourcc:
-            raise Exception('Unable to switch to MJPG mode!')
+            raise Exception("Unable to switch to MJPG mode!")
         self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 0.0)
         log.warning(self.cap.get(cv2.CAP_PROP_CONVERT_RGB))
         self.max_width, self.max_height = self._WebCam__setRes(120000, 120000)
 
     def __decode_fourcc(self, v):
         v = int(v)
-        return ''.join([chr(v >> 8 * i & 255) for i in range(4)])
+        return "".join([chr(v >> 8 * i & 255) for i in range(4)])
 
     def release(self):
         if self.cap:
@@ -40,14 +40,12 @@ class WebCam:
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        return (
-         width, height)
+        return (width, height)
 
     def CaptureFull(self):
         result, frame = self.cap.read()
         self.last_frame = frame.tobytes()
-        return (
-         result, self.last_frame)
+        return (result, self.last_frame)
 
     def GetLastFull(self):
         return self.last_frame
@@ -57,7 +55,9 @@ class WebCam:
         if not result:
             return (False, None)
         try:
-            frame = self.jpeg.scale_with_quality(frame, scaling_factor=(self.thumb_scale), quality=(self.thumb_qual))
+            frame = self.jpeg.scale_with_quality(
+                frame, scaling_factor=(self.thumb_scale), quality=(self.thumb_qual)
+            )
         except IOError as ex:
             try:
                 log.error(str(ex))
@@ -66,25 +66,23 @@ class WebCam:
                 ex = None
                 del ex
 
-        return (
-         result, frame)
+        return (result, frame)
 
 
 class CameraServer:
-
     def __init__(self, cfg):
         self.cfg = cfg
         self.cam = WebCam()
         self.stop_lock = threading.Lock()
         self.stop = False
-        self.server_ip = '0.0.0.0'
+        self.server_ip = "0.0.0.0"
         self.server_port = 5006
         self.frame_time = 0.1
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)
 
     def stop(self):
-        log.info('Camera server requested to stop')
+        log.info("Camera server requested to stop")
         with self.stop_lock:
             self.stop = True
 
@@ -92,10 +90,9 @@ class CameraServer:
         self.stop = False
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((self.server_ip, self.server_port))
-        log.info('Camera server started')
+        log.info("Camera server started")
         sock.setblocking(0)
-        sockets = [
-         sock]
+        sockets = [sock]
         last_thumb = 0.0
         self.cam.CaptureThumb()
         while 1:
@@ -115,13 +112,13 @@ class CameraServer:
                                 sockets.remove(insock)
                             else:
                                 print(data)
-                                if data[0] == ord('F'):
+                                if data[0] == ord("F"):
                                     frame = self.cam.GetLastFull()
                                     frame_size = len(frame)
-                                    resp = b'F' + frame_size.to_bytes(4, 'big')
+                                    resp = b"F" + frame_size.to_bytes(4, "big")
                                     resp += frame
                                     resp_packets.append(resp)
-                                    print('Added full frame')
+                                    print("Added full frame")
                     except ConnectionError:
                         pass
 
@@ -131,7 +128,7 @@ class CameraServer:
                 res, frame = self.cam.CaptureThumb()
                 if res:
                     frame_size = len(frame)
-                    resp = b'T' + frame_size.to_bytes(4, 'big')
+                    resp = b"T" + frame_size.to_bytes(4, "big")
                     resp += frame
                     resp_packets.append(resp)
                 last_thumb = now

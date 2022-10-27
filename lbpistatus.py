@@ -5,13 +5,15 @@
 # Compiled at: 2021-09-13 10:26:38
 # Size of source mod 2**32: 177 bytes
 from LBBridge import log
-log.init_logger('lbpistatus')
+
+log.init_logger("lbpistatus")
 from LBBridge import pi_state
+
 
 def main():
     ps = pi_state.PiState()
     ps.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

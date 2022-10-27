@@ -11,16 +11,18 @@ import sys
 from . import proc_status
 from .proc_status import STATUS
 from . import version
+
 HEADERS = {
-  'time': 'Current Time:',
-  'net': 'Network:',
-  'relay': 'Control Relay:',
-  'relay_info': 'Relay Info:',
-  'cam': 'Camera:',
-  'pi': 'Raspberry Pi'}
+    "time": "Current Time:",
+    "net": "Network:",
+    "relay": "Control Relay:",
+    "relay_info": "Relay Info:",
+    "cam": "Camera:",
+    "pi": "Raspberry Pi",
+}
+
 
 class Dashboard:
-
     def __init__(self, scr, check_service=False):
         curses.noecho()
         curses.curs_set(0)
@@ -65,12 +67,17 @@ class Dashboard:
             self.update()
             time.sleep(1)
 
-    def addline(self, line=''):
+    def addline(self, line=""):
         self.scr.addstr(self.line, self.indent, line)
         self.line += 1
 
     def addheader(self, header, stat=STATUS.ok):
-        self.scr.addstr(self.line, self.indent, header, curses.color_pair(stat.value) | curses.A_BOLD)
+        self.scr.addstr(
+            self.line,
+            self.indent,
+            header,
+            curses.color_pair(stat.value) | curses.A_BOLD,
+        )
 
     def addval(self, val):
         self.scr.addstr(self.line, self.val_col, val)
@@ -90,56 +97,56 @@ class Dashboard:
 
     def add_title(self):
         self.addline(self.title)
-        self.addline('*' * len(self.title))
+        self.addline("*" * len(self.title))
 
     def status_time(self):
         now = datetime.now()
-        msg = now.strftime('%H:%M:%S')
+        msg = now.strftime("%H:%M:%S")
         status = STATUS.none
-        header = HEADERS['time']
+        header = HEADERS["time"]
         self.addheader(header, status)
         self.addval(msg)
 
     def status_wifi(self):
         status, msg = self.proc_wifi.GetStatus()
-        header = HEADERS['net']
+        header = HEADERS["net"]
         self.addheader(header, status)
         self.addval(msg)
 
     def status_relay(self):
         status, msg = self.proc_relay.GetStatus()
-        header = HEADERS['relay']
+        header = HEADERS["relay"]
         self.addheader(header, status)
         self.addval(msg)
 
     def status_relay_info(self):
         status, msg = self.proc_relay_details.GetStatus()
-        header = HEADERS['relay_info']
+        header = HEADERS["relay_info"]
         self.addheader(header, status)
         self.addval(msg)
 
     def status_camera(self):
-        msg = 'No camera device found'
+        msg = "No camera device found"
         status = STATUS.warn
-        header = HEADERS['cam']
+        header = HEADERS["cam"]
         self.addheader(header, status)
         self.addval(msg)
 
     def status_pi(self):
         status, msg = self.proc_pi.GetStatus()
-        header = HEADERS['pi']
+        header = HEADERS["pi"]
         if msg:
             self.addheader(header, status)
             self.addval(msg[0])
         else:
             self.addheader(header, STATUS.ok)
-            self.addval('No issues found')
+            self.addval("No issues found")
 
 
 def main(scr):
     check_service = False
     if len(sys.argv) > 1:
-        check_service = sys.argv[1] == '--cs'
+        check_service = sys.argv[1] == "--cs"
     d = Dashboard(scr, check_service)
     try:
         d.run()

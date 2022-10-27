@@ -9,22 +9,25 @@ from time import sleep
 from . import log
 from .proc_status import PiStatus, STATUS
 from .filelock import Timeout, FileLock
+
 THROTTLE_MESSAGES = {
-  0: (True, 'Under-voltage!'),
-  1: (True, 'ARM frequency capped!'),
-  2: (True, 'Currently throttled!'),
-  3: (True, 'Soft temperature limit active!'),
-  16: (False, 'Under-voltage has occurred since last reboot.'),
-  17: (False, 'Throttling has occurred since last reboot.'),
-  18: (False, 'ARM frequency capping has occurred since last reboot.'),
-  19: (False, 'Soft temperature limit has occurred since last reboot')}
+    0: (True, "Under-voltage!"),
+    1: (True, "ARM frequency capped!"),
+    2: (True, "Currently throttled!"),
+    3: (True, "Soft temperature limit active!"),
+    16: (False, "Under-voltage has occurred since last reboot."),
+    17: (False, "Throttling has occurred since last reboot."),
+    18: (False, "ARM frequency capping has occurred since last reboot."),
+    19: (False, "Soft temperature limit has occurred since last reboot"),
+}
+
 
 class PiState:
-
     def __init__(self):
         self._PiState__is_pi = False
         try:
             import RPi.GPIO as gpio
+
             self._PiState__is_pi = True
         except:
             pass
@@ -33,7 +36,7 @@ class PiState:
         self.stop = False
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)
-        self.throttle_cmd = 'vcgencmd get_throttled'
+        self.throttle_cmd = "vcgencmd get_throttled"
         self.status = PiStatus()
         self.state = []
 
@@ -47,7 +50,7 @@ class PiState:
     def __get_throttled(self):
         throttled_output = subprocess.check_output((self.throttle_cmd), shell=True)
         throttled_output = throttled_output.strip()
-        hex_val = throttled_output.split(b'=')[1]
+        hex_val = throttled_output.split(b"=")[1]
         throttled_binary = int(hex_val, base=16)
         msgs = []
         for position, message in THROTTLE_MESSAGES.items():
@@ -63,7 +66,7 @@ class PiState:
         status, msgs = self._PiState__get_throttled()
         if not status:
             self.state = []
-            log.info('No Pi power issues')
+            log.info("No Pi power issues")
         else:
             is_error = False
             for error, msg in msgs:

@@ -4,8 +4,9 @@
 # Embedded file name: /boot/LBBridge/LBBridge/filelock.py
 # Compiled at: 2021-08-26 10:07:04
 # Size of source mod 2**32: 12835 bytes
-__doc__ = '\nA platform independent file lock that supports the with-statement.\n'
+__doc__ = "\nA platform independent file lock that supports the with-statement.\n"
 import logging, os, threading, time
+
 try:
     import warnings
 except ImportError:
@@ -27,14 +28,16 @@ except NameError:
     TimeoutError = OSError
 
 __all__ = [
- 'Timeout',
- 'BaseFileLock',
- 'WindowsFileLock',
- 'UnixFileLock',
- 'SoftFileLock',
- 'FileLock']
-__version__ = '3.0.12'
+    "Timeout",
+    "BaseFileLock",
+    "WindowsFileLock",
+    "UnixFileLock",
+    "SoftFileLock",
+    "FileLock",
+]
+__version__ = "3.0.12"
 _logger = None
+
 
 def logger():
     """Returns the logger instance used in this module."""
@@ -44,7 +47,7 @@ def logger():
 
 
 class Timeout(TimeoutError):
-    __doc__ = '\n    Raised when the lock could not be acquired in *timeout*\n    seconds.\n    '
+    __doc__ = "\n    Raised when the lock could not be acquired in *timeout*\n    seconds.\n    "
 
     def __init__(self, lock_file):
         """
@@ -57,7 +60,6 @@ class Timeout(TimeoutError):
 
 
 class _Acquire_ReturnProxy(object):
-
     def __init__(self, lock):
         self.lock = lock
 
@@ -69,7 +71,7 @@ class _Acquire_ReturnProxy(object):
 
 
 class BaseFileLock(object):
-    __doc__ = '\n    Implements the base class of a file lock.\n    '
+    __doc__ = "\n    Implements the base class of a file lock.\n    "
 
     def __init__(self, lock_file, timeout=-1):
         """
@@ -180,17 +182,28 @@ class BaseFileLock(object):
             while True:
                 with self._thread_lock:
                     if not self.is_locked:
-                        logger().debug('Attempting to acquire lock %s on %s', lock_id, lock_filename)
+                        logger().debug(
+                            "Attempting to acquire lock %s on %s",
+                            lock_id,
+                            lock_filename,
+                        )
                         self._acquire()
                 if self.is_locked:
-                    logger().info('Lock %s acquired on %s', lock_id, lock_filename)
+                    logger().info("Lock %s acquired on %s", lock_id, lock_filename)
                     break
                 else:
                     if timeout >= 0 and time.time() - start_time > timeout:
-                        logger().debug('Timeout on acquiring lock %s on %s', lock_id, lock_filename)
+                        logger().debug(
+                            "Timeout on acquiring lock %s on %s", lock_id, lock_filename
+                        )
                         raise Timeout(self._lock_file)
                     else:
-                        logger().debug('Lock %s not acquired on %s, waiting %s seconds ...', lock_id, lock_filename, poll_intervall)
+                        logger().debug(
+                            "Lock %s not acquired on %s, waiting %s seconds ...",
+                            lock_id,
+                            lock_filename,
+                            poll_intervall,
+                        )
                         time.sleep(poll_intervall)
 
         except:
@@ -219,10 +232,12 @@ class BaseFileLock(object):
                 if self._lock_counter == 0 or force:
                     lock_id = id(self)
                     lock_filename = self._lock_file
-                    logger().debug('Attempting to release lock %s on %s', lock_id, lock_filename)
+                    logger().debug(
+                        "Attempting to release lock %s on %s", lock_id, lock_filename
+                    )
                     self._release()
                     self._lock_counter = 0
-                    logger().info('Lock %s released on %s', lock_id, lock_filename)
+                    logger().info("Lock %s released on %s", lock_id, lock_filename)
 
     def __enter__(self):
         self.acquire()
@@ -236,7 +251,7 @@ class BaseFileLock(object):
 
 
 class WindowsFileLock(BaseFileLock):
-    __doc__ = '\n    Uses the :func:`msvcrt.locking` function to hard lock the lock file on\n    windows systems.\n    '
+    __doc__ = "\n    Uses the :func:`msvcrt.locking` function to hard lock the lock file on\n    windows systems.\n    "
 
     def _acquire(self):
         open_mode = os.O_RDWR | os.O_CREAT | os.O_TRUNC
@@ -264,7 +279,7 @@ class WindowsFileLock(BaseFileLock):
 
 
 class UnixFileLock(BaseFileLock):
-    __doc__ = '\n    Uses the :func:`fcntl.flock` to hard lock the lock file on unix systems.\n    '
+    __doc__ = "\n    Uses the :func:`fcntl.flock` to hard lock the lock file on unix systems.\n    "
 
     def _acquire(self):
         open_mode = os.O_RDWR | os.O_CREAT | os.O_TRUNC
@@ -284,7 +299,7 @@ class UnixFileLock(BaseFileLock):
 
 
 class SoftFileLock(BaseFileLock):
-    __doc__ = '\n    Simply watches the existence of the lock file.\n    '
+    __doc__ = "\n    Simply watches the existence of the lock file.\n    "
 
     def _acquire(self):
         open_mode = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_TRUNC
@@ -313,4 +328,4 @@ else:
     else:
         FileLock = SoftFileLock
         if warnings is not None:
-            warnings.warn('only soft file lock is available')
+            warnings.warn("only soft file lock is available")

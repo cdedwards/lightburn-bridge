@@ -94,8 +94,7 @@ class RuidaRelay(Relay):
                             if len(packet) == packetLen:
                                 if packetType == ord("L"):
                                     outSock.sendto(
-                                        packet,
-                                        (self.laser_ip, self.to_laser_port),
+                                        packet, (self.laser_ip, self.to_laser_port)
                                     )
                                     lastLen = packetLen
                                     packetLen = 0
@@ -104,9 +103,7 @@ class RuidaRelay(Relay):
                                     gotAck = False
                                 else:
                                     if packetType == ord("P"):
-                                        data = b"P\x00\x02" + bytes(
-                                            self.version
-                                        )
+                                        data = b"P\x00\x02" + bytes(self.version)
                                         serv.send(data)
                                     else:
                                         self.status.error(
@@ -149,9 +146,7 @@ class RuidaRelay(Relay):
             sock.listen(1)
             gotConnect = False
             while True:
-                readable, writable, exceptional = select.select(
-                    [sock], [], [sock], 1.0
-                )
+                readable, writable, exceptional = select.select([sock], [], [sock], 1.0)
                 if sock in readable:
                     gotConnect = True
                     break

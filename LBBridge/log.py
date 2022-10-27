@@ -6,9 +6,11 @@
 # Size of source mod 2**32: 1233 bytes
 import logging, sys, os, logging
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 LOG_PATH = None
 LOG_FILE = None
 __logger = None
+
 
 def __no_log(_):
     pass
@@ -22,6 +24,7 @@ critical = __no_log
 exception = __no_log
 setLevel = __no_log
 
+
 def init_logger(name):
     global __logger
     global critical
@@ -32,15 +35,20 @@ def init_logger(name):
     global setLevel
     global warning
     __logger = logging.getLogger(name)
-    formatter = logging.Formatter(fmt='%(asctime)s | %(levelname)s - %(message)s')
+    formatter = logging.Formatter(fmt="%(asctime)s | %(levelname)s - %(message)s")
     __logger.handlers = []
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
     __logger.addHandler(stream_handler)
     setLevel = __logger.setLevel
     debug, info, warning, error, critical, exception = (
-     __logger.debug, __logger.info, __logger.warning, __logger.error, __logger.critical,
-     __logger.exception)
+        __logger.debug,
+        __logger.info,
+        __logger.warning,
+        __logger.error,
+        __logger.critical,
+        __logger.exception,
+    )
     setLevel(INFO)
 
 

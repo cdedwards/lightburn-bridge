@@ -1,22 +1,25 @@
 from __future__ import with_statement
-__doc__ = '\nBottle is a fast and simple micro-framework for small web applications. It\noffers request dispatching (Routes) with url parameter support, templates,\na built-in HTTP Server and adapters for many third party WSGI/HTTP-server and\ntemplate engines - all in a single file and with no dependencies other than the\nPython Standard Library.\n\nHomepage and documentation: http://bottlepy.org/\n\nCopyright (c) 2016, Marcel Hellkamp.\nLicense: MIT (see LICENSE for details)\n'
-__author__ = 'Marcel Hellkamp'
-__version__ = '0.12.19'
-__license__ = 'MIT'
-if __name__ == '__main__':
+
+__doc__ = "\nBottle is a fast and simple micro-framework for small web applications. It\noffers request dispatching (Routes) with url parameter support, templates,\na built-in HTTP Server and adapters for many third party WSGI/HTTP-server and\ntemplate engines - all in a single file and with no dependencies other than the\nPython Standard Library.\n\nHomepage and documentation: http://bottlepy.org/\n\nCopyright (c) 2016, Marcel Hellkamp.\nLicense: MIT (see LICENSE for details)\n"
+__author__ = "Marcel Hellkamp"
+__version__ = "0.12.19"
+__license__ = "MIT"
+if __name__ == "__main__":
     from optparse import OptionParser
-    _cmd_parser = OptionParser(usage='usage: %prog [options] package.module:app')
+
+    _cmd_parser = OptionParser(usage="usage: %prog [options] package.module:app")
     _opt = _cmd_parser.add_option
-    _opt('--version', action='store_true', help='show version number.')
-    _opt('-b', '--bind', metavar='ADDRESS', help='bind socket to ADDRESS.')
-    _opt('-s', '--server', default='wsgiref', help='use SERVER as backend.')
-    _opt('-p', '--plugin', action='append', help='install additional plugin/s.')
-    _opt('--debug', action='store_true', help='start server in debug mode.')
-    _opt('--reload', action='store_true', help='auto-reload on file changes.')
+    _opt("--version", action="store_true", help="show version number.")
+    _opt("-b", "--bind", metavar="ADDRESS", help="bind socket to ADDRESS.")
+    _opt("-s", "--server", default="wsgiref", help="use SERVER as backend.")
+    _opt("-p", "--plugin", action="append", help="install additional plugin/s.")
+    _opt("--debug", action="store_true", help="start server in debug mode.")
+    _opt("--reload", action="store_true", help="auto-reload on file changes.")
     _cmd_options, _cmd_args = _cmd_parser.parse_args()
     if _cmd_options.server:
-        if _cmd_options.server.startswith('gevent'):
+        if _cmd_options.server.startswith("gevent"):
             import gevent.monkey
+
             gevent.monkey.patch_all()
 import base64, cgi, email.utils, functools, hmac, itertools, mimetypes, os, re, subprocess, sys, tempfile, threading, time, warnings, hashlib
 from datetime import date as datedate, datetime, timedelta
@@ -24,6 +27,7 @@ from tempfile import TemporaryFile
 from traceback import format_exc, print_exc
 from inspect import getargspec
 from unicodedata import normalize
+
 try:
     from simplejson import dumps as json_dumps, loads as json_lds
 except ImportError:
@@ -35,8 +39,7 @@ except ImportError:
         except ImportError:
 
             def json_dumps(data):
-                raise ImportError('JSON support requires Python 2.6 or simplejson.')
-
+                raise ImportError("JSON support requires Python 2.6 or simplejson.")
 
             json_lds = json_dumps
 
@@ -44,6 +47,7 @@ py = sys.version_info
 py3k = py >= (3, 0, 0)
 py25 = py < (2, 6, 0)
 py31 = (3, 1, 0) <= py < (3, 2, 0)
+
 
 def _e():
     return sys.exc_info()[1]
@@ -60,8 +64,10 @@ if py3k:
     import _thread as thread
     from urllib.parse import urljoin, SplitResult as UrlSplitResult
     from urllib.parse import urlencode, quote as urlquote, unquote as urlunquote
-    urlunquote = functools.partial(urlunquote, encoding='latin1')
+
+    urlunquote = functools.partial(urlunquote, encoding="latin1")
     from http.cookies import SimpleCookie
+
     if py >= (3, 3, 0):
         from collections.abc import MutableMapping as DictMixin
         from types import ModuleType as new_module
@@ -71,10 +77,11 @@ if py3k:
     import pickle
     from io import BytesIO
     from configparser import ConfigParser
+
     basestring = str
     unicode = str
     json_loads = lambda s: json_lds(touni(s))
-    callable = lambda x: hasattr(x, '__call__')
+    callable = lambda x: hasattr(x, "__call__")
     imap = map
 
     def _raise(*a):
@@ -91,29 +98,30 @@ else:
     from imp import new_module
     from StringIO import StringIO as BytesIO
     from ConfigParser import SafeConfigParser as ConfigParser
+
     if py25:
-        msg = 'Python 2.5 support may be dropped in future versions of Bottle.'
+        msg = "Python 2.5 support may be dropped in future versions of Bottle."
         warnings.warn(msg, DeprecationWarning)
         from UserDict import DictMixin
 
         def next(it):
             return it.next()
 
-
         bytes = str
     else:
         from collections import MutableMapping as DictMixin
     unicode = unicode
     json_loads = json_lds
-    eval(compile('def _raise(*a): raise a[0], a[1], a[2]', '<py3fix>', 'exec'))
+    eval(compile("def _raise(*a): raise a[0], a[1], a[2]", "<py3fix>", "exec"))
 
-def tob(s, enc='utf8'):
+
+def tob(s, enc="utf8"):
     if isinstance(s, unicode):
         return s.encode(enc)
     return bytes(s)
 
 
-def touni(s, enc='utf8', err='strict'):
+def touni(s, enc="utf8", err="strict"):
     if isinstance(s, bytes):
         return s.decode(enc, err)
     return unicode(s)
@@ -124,7 +132,6 @@ if py31:
     from io import TextIOWrapper
 
     class NCTextIOWrapper(TextIOWrapper):
-
         def close(self):
             pass
 
@@ -144,13 +151,12 @@ def makelist(data):
     if isinstance(data, (tuple, list, set, dict)):
         return list(data)
     if data:
-        return [
-         data]
+        return [data]
     return []
 
 
 class DictProperty(object):
-    __doc__ = ' Property that maps to a key in a local dict-like attribute. '
+    __doc__ = " Property that maps to a key in a local dict-like attribute. "
 
     def __init__(self, attr, key=None, read_only=False):
         self.attr, self.key, self.read_only = attr, key, read_only
@@ -170,20 +176,20 @@ class DictProperty(object):
 
     def __set__(self, obj, value):
         if self.read_only:
-            raise AttributeError('Read-Only property.')
+            raise AttributeError("Read-Only property.")
         getattr(obj, self.attr)[self.key] = value
 
     def __delete__(self, obj):
         if self.read_only:
-            raise AttributeError('Read-Only property.')
+            raise AttributeError("Read-Only property.")
         del getattr(obj, self.attr)[self.key]
 
 
 class cached_property(object):
-    __doc__ = ' A property that is only computed once per instance and then replaces\n        itself with an ordinary attribute. Deleting the attribute resets the\n        property. '
+    __doc__ = " A property that is only computed once per instance and then replaces\n        itself with an ordinary attribute. Deleting the attribute resets the\n        property. "
 
     def __init__(self, func):
-        self.__doc__ = getattr(func, '__doc__')
+        self.__doc__ = getattr(func, "__doc__")
         self.func = func
 
     def __get__(self, obj, cls):
@@ -194,7 +200,7 @@ class cached_property(object):
 
 
 class lazy_attribute(object):
-    __doc__ = ' A property that caches itself to the class object. '
+    __doc__ = " A property that caches itself to the class object. "
 
     def __init__(self, func):
         functools.update_wrapper(self, func, updated=[])
@@ -207,15 +213,15 @@ class lazy_attribute(object):
 
 
 class BottleException(Exception):
-    __doc__ = ' A base class for exceptions used by bottle. '
+    __doc__ = " A base class for exceptions used by bottle. "
 
 
 class RouteError(BottleException):
-    __doc__ = ' This is a base class for all routing related exceptions '
+    __doc__ = " This is a base class for all routing related exceptions "
 
 
 class RouteReset(BottleException):
-    __doc__ = ' If raised by a plugin or request handler, the route is reset and all\n        plugins are re-applied. '
+    __doc__ = " If raised by a plugin or request handler, the route is reset and all\n        plugins are re-applied. "
 
 
 class RouterUnknownModeError(RouteError):
@@ -223,26 +229,29 @@ class RouterUnknownModeError(RouteError):
 
 
 class RouteSyntaxError(RouteError):
-    __doc__ = ' The route parser found something not supported by this router. '
+    __doc__ = " The route parser found something not supported by this router. "
 
 
 class RouteBuildError(RouteError):
-    __doc__ = ' The route could not be built. '
+    __doc__ = " The route could not be built. "
 
 
 def _re_flatten(p):
     """ Turn all capturing groups in a regular expression pattern into
         non-capturing groups. """
-    if '(' not in p:
+    if "(" not in p:
         return p
-    return re.sub('(\\\\*)(\\(\\?P<[^>]+>|\\((?!\\?))', lambda m: m.group(0) if len(m.group(1)) % 2 else m.group(1) + '(?:'
-, p)
+    return re.sub(
+        "(\\\\*)(\\(\\?P<[^>]+>|\\((?!\\?))",
+        lambda m: m.group(0) if len(m.group(1)) % 2 else m.group(1) + "(?:",
+        p,
+    )
 
 
 class Router(object):
-    __doc__ = ' A Router is an ordered collection of route->target pairs. It is used to\n        efficiently match WSGI requests against a number of routes and return\n        the first target that satisfies the request. The target may be anything,\n        usually a string, ID or callable object. A route consists of a path-rule\n        and a HTTP method.\n\n        The path-rule is either a static path (e.g. `/contact`) or a dynamic\n        path that contains wildcards (e.g. `/wiki/<page>`). The wildcard syntax\n        and details on the matching order are described in docs:`routing`.\n    '
-    default_pattern = '[^/]+'
-    default_filter = 're'
+    __doc__ = " A Router is an ordered collection of route->target pairs. It is used to\n        efficiently match WSGI requests against a number of routes and return\n        the first target that satisfies the request. The target may be anything,\n        usually a string, ID or callable object. A route consists of a path-rule\n        and a HTTP method.\n\n        The path-rule is either a static path (e.g. `/contact`) or a dynamic\n        path that contains wildcards (e.g. `/wiki/<page>`). The wildcard syntax\n        and details on the matching order are described in docs:`routing`.\n    "
+    default_pattern = "[^/]+"
+    default_filter = "re"
     _MAX_GROUPS_PER_PATTERN = 99
 
     def __init__(self, strict=False):
@@ -253,19 +262,12 @@ class Router(object):
         self.dyna_routes = {}
         self.dyna_regexes = {}
         self.strict_order = strict
-        self.filters = {'re':lambda conf: (
-          _re_flatten(conf or self.default_pattern), None, None)
-, 
-         'int':lambda conf: (
-          '-?\\d+', int, lambda x: str(int(x))
-)
-, 
-         'float':lambda conf: (
-          '-?[\\d.]+', float, lambda x: str(float(x))
-)
-, 
-         'path':lambda conf: ('.+?', None, None)
-}
+        self.filters = {
+            "re": lambda conf: (_re_flatten(conf or self.default_pattern), None, None),
+            "int": lambda conf: ("-?\\d+", int, lambda x: str(int(x))),
+            "float": lambda conf: ("-?[\\d.]+", float, lambda x: str(float(x))),
+            "path": lambda conf: (".+?", None, None),
+        }
 
     def add_filter(self, name, func):
         """ Add a filter. The provided function is called with the configuration
@@ -273,51 +275,51 @@ class Router(object):
         The first element is a string, the last two are callables or None. """
         self.filters[name] = func
 
-    rule_syntax = re.compile('(\\\\*)(?:(?::([a-zA-Z_][a-zA-Z_0-9]*)?()(?:#(.*?)#)?)|(?:<([a-zA-Z_][a-zA-Z_0-9]*)?(?::([a-zA-Z_]*)(?::((?:\\\\.|[^\\\\>]+)+)?)?)?>))')
+    rule_syntax = re.compile(
+        "(\\\\*)(?:(?::([a-zA-Z_][a-zA-Z_0-9]*)?()(?:#(.*?)#)?)|(?:<([a-zA-Z_][a-zA-Z_0-9]*)?(?::([a-zA-Z_]*)(?::((?:\\\\.|[^\\\\>]+)+)?)?)?>))"
+    )
 
     def _itertokens(self, rule):
-        offset, prefix = (0, '')
+        offset, prefix = (0, "")
         for match in self.rule_syntax.finditer(rule):
-            prefix += rule[offset:match.start()]
+            prefix += rule[offset : match.start()]
             g = match.groups()
             if len(g[0]) % 2:
-                prefix += match.group(0)[len(g[0]):]
+                prefix += match.group(0)[len(g[0]) :]
                 offset = match.end()
                 continue
             else:
                 if prefix:
-                    yield (
-                     prefix, None, None)
+                    yield (prefix, None, None)
                 name, filtr, conf = g[4:7] if g[2] is None else g[1:4]
-                yield (name, filtr or 'default', conf or None)
-                offset, prefix = match.end(), ''
+                yield (name, filtr or "default", conf or None)
+                offset, prefix = match.end(), ""
 
         if offset <= len(rule) or prefix:
-            yield (
-             prefix + rule[offset:], None, None)
+            yield (prefix + rule[offset:], None, None)
 
     def add(self, rule, method, target, name=None):
         """ Add a new rule or replace the target for an existing rule. """
         global DEBUG
         anons = 0
         keys = []
-        pattern = ''
+        pattern = ""
         filters = []
         builder = []
         is_static = True
         for key, mode, conf in self._itertokens(rule):
             if mode:
                 is_static = False
-                if mode == 'default':
+                if mode == "default":
                     mode = self.default_filter
                 else:
                     mask, in_filter, out_filter = self.filters[mode](conf)
                     if not key:
-                        pattern += '(?:%s)' % mask
-                        key = 'anon%d' % anons
+                        pattern += "(?:%s)" % mask
+                        key = "anon%d" % anons
                         anons += 1
                     else:
-                        pattern += '(?P<%s>%s)' % (key, mask)
+                        pattern += "(?P<%s>%s)" % (key, mask)
                         keys.append(key)
                     if in_filter:
                         filters.append((key, in_filter))
@@ -335,10 +337,10 @@ class Router(object):
                 self.static[method][self.build(rule)] = (target, None)
                 return
         try:
-            re_pattern = re.compile('^(%s)$' % pattern)
+            re_pattern = re.compile("^(%s)$" % pattern)
             re_match = re_pattern.match
         except re.error:
-            raise RouteSyntaxError('Could not add Route: %s (%s)' % (rule, _e()))
+            raise RouteSyntaxError("Could not add Route: %s (%s)" % (rule, _e()))
 
         if filters:
 
@@ -348,7 +350,7 @@ class Router(object):
                     try:
                         url_args[name] = wildcard_filter(url_args[name])
                     except ValueError:
-                        raise HTTPError(400, 'Path has wrong format.')
+                        raise HTTPError(400, "Path has wrong format.")
 
                 return url_args
 
@@ -362,10 +364,9 @@ class Router(object):
                 getargs = None
         flatpat = _re_flatten(pattern)
         whole_rule = (rule, flatpat, target, getargs)
-        if (
-         flatpat, method) in self._groups:
+        if (flatpat, method) in self._groups:
             if DEBUG:
-                msg = 'Route <%s %s> overwrites a previously defined route'
+                msg = "Route <%s %s> overwrites a previously defined route"
                 warnings.warn(msg % (method, rule), RuntimeWarning)
             self.dyna_routes[method][self._groups[(flatpat, method)]] = whole_rule
         else:
@@ -378,9 +379,9 @@ class Router(object):
         comborules = self.dyna_regexes[method] = []
         maxgroups = self._MAX_GROUPS_PER_PATTERN
         for x in range(0, len(all_rules), maxgroups):
-            some = all_rules[x:x + maxgroups]
+            some = all_rules[x : x + maxgroups]
             combined = (flatpat for _, flatpat, _, _ in some)
-            combined = '|'.join(('(^%s$)' % flatpat for flatpat in combined))
+            combined = "|".join(("(^%s$)" % flatpat for flatpat in combined))
             combined = re.compile(combined).match
             rules = [(target, getargs) for _, _, target, getargs in some]
             comborules.append((combined, rules))
@@ -389,42 +390,38 @@ class Router(object):
         """ Build an URL by filling the wildcards in a rule. """
         builder = self.builder.get(_name)
         if not builder:
-            raise RouteBuildError('No route with that name.', _name)
+            raise RouteBuildError("No route with that name.", _name)
         try:
             for i, value in enumerate(anons):
-                query['anon%d' % i] = value
+                query["anon%d" % i] = value
 
-            url = ''.join([f(query.pop(n)) if n else f for n, f in builder])
+            url = "".join([f(query.pop(n)) if n else f for n, f in builder])
             if not query:
                 return url
-            return url + '?' + urlencode(query)
+            return url + "?" + urlencode(query)
         except KeyError:
-            raise RouteBuildError('Missing URL argument: %r' % _e().args[0])
+            raise RouteBuildError("Missing URL argument: %r" % _e().args[0])
 
     def match(self, environ):
         """ Return a (target, url_agrs) tuple or raise HTTPError(400/404/405). """
-        verb = environ['REQUEST_METHOD'].upper()
-        path = environ['PATH_INFO'] or '/'
+        verb = environ["REQUEST_METHOD"].upper()
+        path = environ["PATH_INFO"] or "/"
         target = None
-        if verb == 'HEAD':
-            methods = [
-             'PROXY', verb, 'GET', 'ANY']
+        if verb == "HEAD":
+            methods = ["PROXY", verb, "GET", "ANY"]
         else:
-            methods = [
-             'PROXY', verb, 'ANY']
+            methods = ["PROXY", verb, "ANY"]
         for method in methods:
             if method in self.static:
                 if path in self.static[method]:
                     target, getargs = self.static[method][path]
-                    return (
-                     target, getargs(path) if getargs else {})
+                    return (target, getargs(path) if getargs else {})
             if method in self.dyna_regexes:
                 for combined, rules in self.dyna_regexes[method]:
                     match = combined(path)
                     if match:
                         target, getargs = rules[match.lastindex - 1]
-                        return (
-                         target, getargs(path) if getargs else {})
+                        return (target, getargs(path) if getargs else {})
 
         allowed = set([])
         nocheck = set(methods)
@@ -439,15 +436,25 @@ class Router(object):
                     allowed.add(method)
 
         if allowed:
-            allow_header = ','.join(sorted(allowed))
-            raise HTTPError(405, 'Method not allowed.', Allow=allow_header)
-        raise HTTPError(404, 'Not found: ' + repr(path))
+            allow_header = ",".join(sorted(allowed))
+            raise HTTPError(405, "Method not allowed.", Allow=allow_header)
+        raise HTTPError(404, "Not found: " + repr(path))
 
 
 class Route(object):
-    __doc__ = ' This class wraps a route callback along with route specific metadata and\n        configuration and applies Plugins on demand. It is also responsible for\n        turing an URL path rule into a regular expression usable by the Router.\n    '
+    __doc__ = " This class wraps a route callback along with route specific metadata and\n        configuration and applies Plugins on demand. It is also responsible for\n        turing an URL path rule into a regular expression usable by the Router.\n    "
 
-    def __init__(self, app, rule, method, callback, name=None, plugins=None, skiplist=None, **config):
+    def __init__(
+        self,
+        app,
+        rule,
+        method,
+        callback,
+        name=None,
+        plugins=None,
+        skiplist=None,
+        **config
+    ):
         self.app = app
         self.rule = rule
         self.method = method
@@ -458,7 +465,9 @@ class Route(object):
         self.config = ConfigDict().load_dict(config, make_namespaces=True)
 
     def __call__(self, *a, **ka):
-        depr('Some APIs changed to return Route() instances instead of callables. Make sure to use the Route.call method and not to call Route instances directly.')
+        depr(
+            "Some APIs changed to return Route() instances instead of callables. Make sure to use the Route.call method and not to call Route instances directly."
+        )
         return (self.call)(*a, **ka)
 
     @cached_property
@@ -470,7 +479,7 @@ class Route(object):
     def reset(self):
         """ Forget any cached values. The next time :attr:`call` is accessed,
             all plugins are re-applied. """
-        self.__dict__.pop('call', None)
+        self.__dict__.pop("call", None)
 
     def prepare(self):
         """ Do all on-demand work immediately (useful for debugging)."""
@@ -478,12 +487,17 @@ class Route(object):
 
     @property
     def _context(self):
-        depr('Switch to Plugin API v2 and access the Route object directly.')
-        return dict(rule=(self.rule), method=(self.method), callback=(self.callback), name=(self.name),
-          app=(self.app),
-          config=(self.config),
-          apply=(self.plugins),
-          skip=(self.skiplist))
+        depr("Switch to Plugin API v2 and access the Route object directly.")
+        return dict(
+            rule=(self.rule),
+            method=(self.method),
+            callback=(self.callback),
+            name=(self.name),
+            app=(self.app),
+            config=(self.config),
+            apply=(self.plugins),
+            skip=(self.skiplist),
+        )
 
     def all_plugins(self):
         """ Yield all Plugins affecting this route. """
@@ -492,7 +506,7 @@ class Route(object):
             if True in self.skiplist:
                 break
             else:
-                name = getattr(p, 'name', False)
+                name = getattr(p, "name", False)
             if name:
                 if not name in self.skiplist:
                     if name in unique:
@@ -509,8 +523,8 @@ class Route(object):
         callback = self.callback
         for plugin in self.all_plugins():
             try:
-                if hasattr(plugin, 'apply'):
-                    api = getattr(plugin, 'api', 1)
+                if hasattr(plugin, "apply"):
+                    api = getattr(plugin, "api", 1)
                     context = self if api > 1 else self._context
                     callback = plugin.apply(callback, context)
                 else:
@@ -527,8 +541,8 @@ class Route(object):
         """ Return the callback. If the callback is a decorated function, try to
             recover the original function. """
         func = self.callback
-        func = getattr(func, '__func__' if py3k else 'im_func', func)
-        closure_attr = '__closure__' if py3k else 'func_closure'
+        func = getattr(func, "__func__" if py3k else "im_func", func)
+        closure_attr = "__closure__" if py3k else "func_closure"
         while hasattr(func, closure_attr):
             if getattr(func, closure_attr):
                 func = getattr(func, closure_attr)[0].cell_contents
@@ -552,31 +566,31 @@ class Route(object):
 
     def __repr__(self):
         cb = self.get_undecorated_callback()
-        return '<%s %r %r>' % (self.method, self.rule, cb)
+        return "<%s %r %r>" % (self.method, self.rule, cb)
 
 
 class Bottle(object):
-    __doc__ = ' Each Bottle object represents a single, distinct web application and\n        consists of routes, callbacks, plugins, resources and configuration.\n        Instances are callable WSGI applications.\n\n        :param catchall: If true (default), handle all exceptions. Turn off to\n                         let debugging middleware handle exceptions.\n    '
+    __doc__ = " Each Bottle object represents a single, distinct web application and\n        consists of routes, callbacks, plugins, resources and configuration.\n        Instances are callable WSGI applications.\n\n        :param catchall: If true (default), handle all exceptions. Turn off to\n                         let debugging middleware handle exceptions.\n    "
 
     def __init__(self, catchall=True, autojson=True):
         self.config = ConfigDict()
-        self.config._on_change = functools.partial(self.trigger_hook, 'config')
-        self.config.meta_set('autojson', 'validate', bool)
-        self.config.meta_set('catchall', 'validate', bool)
-        self.config['catchall'] = catchall
-        self.config['autojson'] = autojson
+        self.config._on_change = functools.partial(self.trigger_hook, "config")
+        self.config.meta_set("autojson", "validate", bool)
+        self.config.meta_set("catchall", "validate", bool)
+        self.config["catchall"] = catchall
+        self.config["autojson"] = autojson
         self.resources = ResourceManager()
         self.routes = []
         self.router = Router()
         self.error_handler = {}
         self.plugins = []
-        if self.config['autojson']:
+        if self.config["autojson"]:
             self.install(JSONPlugin())
         self.install(TemplatePlugin())
 
-    catchall = DictProperty('config', 'catchall')
-    _Bottle__hook_names = ('before_request', 'after_request', 'app_reset', 'config')
-    _Bottle__hook_reversed = 'after_request'
+    catchall = DictProperty("config", "catchall")
+    _Bottle__hook_names = ("before_request", "after_request", "app_reset", "config")
+    _Bottle__hook_reversed = "after_request"
 
     @cached_property
     def _hooks(self):
@@ -632,10 +646,10 @@ class Bottle(object):
             All other parameters are passed to the underlying :meth:`route` call.
         """
         if isinstance(app, basestring):
-            depr('Parameter order of Bottle.mount() changed.', True)
-        segments = [p for p in prefix.split('/') if p]
+            depr("Parameter order of Bottle.mount() changed.", True)
+        segments = [p for p in prefix.split("/") if p]
         if not segments:
-            raise ValueError('Empty path prefix.')
+            raise ValueError("Empty path prefix.")
         path_depth = len(segments)
 
         def mountpoint_wrapper():
@@ -665,13 +679,13 @@ class Bottle(object):
             finally:
                 request.path_shift(-path_depth)
 
-        options.setdefault('skip', True)
-        options.setdefault('method', 'PROXY')
-        options.setdefault('mountpoint', {'prefix':prefix,  'target':app})
-        options['callback'] = mountpoint_wrapper
-        (self.route)(('/%s/<:re:.*>' % '/'.join(segments)), **options)
-        if not prefix.endswith('/'):
-            (self.route)(('/' + '/'.join(segments)), **options)
+        options.setdefault("skip", True)
+        options.setdefault("method", "PROXY")
+        options.setdefault("mountpoint", {"prefix": prefix, "target": app})
+        options["callback"] = mountpoint_wrapper
+        (self.route)(("/%s/<:re:.*>" % "/".join(segments)), **options)
+        if not prefix.endswith("/"):
+            (self.route)(("/" + "/".join(segments)), **options)
 
     def merge(self, routes):
         """ Merge the routes of another :class:`Bottle` application or a list of
@@ -688,11 +702,11 @@ class Bottle(object):
             applied to all routes of this application. A plugin may be a simple
             decorator or an object that implements the :class:`Plugin` API.
         """
-        if hasattr(plugin, 'setup'):
+        if hasattr(plugin, "setup"):
             plugin.setup(self)
         if not callable(plugin):
-            if not hasattr(plugin, 'apply'):
-                raise TypeError('Plugins must be callable or implement .apply()')
+            if not hasattr(plugin, "apply"):
+                raise TypeError("Plugins must be callable or implement .apply()")
             self.plugins.append(plugin)
             self.reset()
             return plugin
@@ -707,11 +721,11 @@ class Bottle(object):
             if not remove is True:
                 if not remove is plugin:
                     if not remove is type(plugin):
-                        if getattr(plugin, 'name', True) == remove:
+                        if getattr(plugin, "name", True) == remove:
                             pass
             removed.append(plugin)
             del self.plugins[i]
-            if hasattr(plugin, 'close'):
+            if hasattr(plugin, "close"):
                 plugin.close()
 
         if removed:
@@ -726,11 +740,9 @@ class Bottle(object):
             routes = self.routes
         else:
             if isinstance(route, Route):
-                routes = [
-                 route]
+                routes = [route]
             else:
-                routes = [
-                 self.routes[route]]
+                routes = [self.routes[route]]
         for route in routes:
             route.reset()
 
@@ -738,12 +750,12 @@ class Bottle(object):
             for route in routes:
                 route.prepare()
 
-        self.trigger_hook('app_reset')
+        self.trigger_hook("app_reset")
 
     def close(self):
         """ Close the application and all installed plugins. """
         for plugin in self.plugins:
-            if hasattr(plugin, 'close'):
+            if hasattr(plugin, "close"):
                 plugin.close()
 
         self.stopped = True
@@ -760,9 +772,9 @@ class Bottle(object):
 
     def get_url(self, routename, **kargs):
         """ Return a string that matches a named route """
-        scriptname = request.environ.get('SCRIPT_NAME', '').strip('/') + '/'
-        location = (self.router.build)(routename, **kargs).lstrip('/')
-        return urljoin(urljoin('/', scriptname), location)
+        scriptname = request.environ.get("SCRIPT_NAME", "").strip("/") + "/"
+        location = (self.router.build)(routename, **kargs).lstrip("/")
+        return urljoin(urljoin("/", scriptname), location)
 
     def add_route(self, route):
         """ Add a route object, but do not change the :data:`Route.app`
@@ -772,7 +784,16 @@ class Bottle(object):
         if DEBUG:
             route.prepare()
 
-    def route(self, path=None, method='GET', callback=None, name=None, apply=None, skip=None, **config):
+    def route(
+        self,
+        path=None,
+        method="GET",
+        callback=None,
+        name=None,
+        apply=None,
+        skip=None,
+        **config
+    ):
         """ A decorator to bind a function to a request URL. Example::
 
                 @app.route('/hello/:name')
@@ -809,8 +830,16 @@ class Bottle(object):
             for rule in makelist(path) or yieldroutes(callback):
                 for verb in makelist(method):
                     verb = verb.upper()
-                    route = Route(self, rule, verb, callback, name=name, plugins=plugins, 
-                     skiplist=skiplist, **config)
+                    route = Route(
+                        self,
+                        rule,
+                        verb,
+                        callback,
+                        name=name,
+                        plugins=plugins,
+                        skiplist=skiplist,
+                        **config
+                    )
                     self.add_route(route)
 
             return callback
@@ -819,19 +848,19 @@ class Bottle(object):
             return decorator(callback)
         return decorator
 
-    def get(self, path=None, method='GET', **options):
+    def get(self, path=None, method="GET", **options):
         """ Equals :meth:`route`. """
         return (self.route)(path, method, **options)
 
-    def post(self, path=None, method='POST', **options):
+    def post(self, path=None, method="POST", **options):
         """ Equals :meth:`route` with a ``POST`` method parameter. """
         return (self.route)(path, method, **options)
 
-    def put(self, path=None, method='PUT', **options):
+    def put(self, path=None, method="PUT", **options):
         """ Equals :meth:`route` with a ``PUT`` method parameter. """
         return (self.route)(path, method, **options)
 
-    def delete(self, path=None, method='DELETE', **options):
+    def delete(self, path=None, method="DELETE", **options):
         """ Equals :meth:`route` with a ``DELETE`` method parameter. """
         return (self.route)(path, method, **options)
 
@@ -848,26 +877,26 @@ class Bottle(object):
         return tob(template(ERROR_PAGE_TEMPLATE, e=res))
 
     def _handle(self, environ):
-        path = environ['bottle.raw_path'] = environ['PATH_INFO']
+        path = environ["bottle.raw_path"] = environ["PATH_INFO"]
         if py3k:
             try:
-                environ['PATH_INFO'] = path.encode('latin1').decode('utf8')
+                environ["PATH_INFO"] = path.encode("latin1").decode("utf8")
             except UnicodeError:
-                return HTTPError(400, 'Invalid path string. Expected UTF-8')
+                return HTTPError(400, "Invalid path string. Expected UTF-8")
 
         try:
-            environ['bottle.app'] = self
+            environ["bottle.app"] = self
             request.bind(environ)
             response.bind()
             try:
-                self.trigger_hook('before_request')
+                self.trigger_hook("before_request")
                 route, args = self.router.match(environ)
-                environ['route.handle'] = route
-                environ['bottle.route'] = route
-                environ['route.url_args'] = args
+                environ["route.handle"] = route
+                environ["bottle.route"] = route
+                environ["route.url_args"] = args
                 return (route.call)(**args)
             finally:
-                self.trigger_hook('after_request')
+                self.trigger_hook("after_request")
 
         except HTTPResponse:
             return _e()
@@ -880,8 +909,8 @@ class Bottle(object):
             if not self.catchall:
                 raise
             stacktrace = format_exc()
-            environ['wsgi.errors'].write(stacktrace)
-            return HTTPError(500, 'Internal Server Error', _e(), stacktrace)
+            environ["wsgi.errors"].write(stacktrace)
+            return HTTPError(500, "Internal Server Error", _e(), stacktrace)
 
     def _cast(self, out, peek=None):
         """ Try to convert the parameter into something WSGI compatible and set
@@ -890,8 +919,8 @@ class Bottle(object):
         iterable of strings and iterable of unicodes
         """
         if not out:
-            if 'Content-Length' not in response:
-                response['Content-Length'] = 0
+            if "Content-Length" not in response:
+                response["Content-Length"] = 0
             return []
         if isinstance(out, (tuple, list)):
             if isinstance(out[0], (bytes, unicode)):
@@ -899,20 +928,22 @@ class Bottle(object):
         if isinstance(out, unicode):
             out = out.encode(response.charset)
         if isinstance(out, bytes):
-            if 'Content-Length' not in response:
-                response['Content-Length'] = len(out)
+            if "Content-Length" not in response:
+                response["Content-Length"] = len(out)
             return [out]
         if isinstance(out, HTTPError):
             out.apply(response)
-            out = self.error_handler.get(out.status_code, self.default_error_handler)(out)
+            out = self.error_handler.get(out.status_code, self.default_error_handler)(
+                out
+            )
             return self._cast(out)
         if isinstance(out, HTTPResponse):
             out.apply(response)
             return self._cast(out.body)
-        if hasattr(out, 'read'):
-            if 'wsgi.file_wrapper' in request.environ:
-                return request.environ['wsgi.file_wrapper'](out)
-            if not (hasattr(out, 'close') or hasattr(out, '__iter__')):
+        if hasattr(out, "read"):
+            if "wsgi.file_wrapper" in request.environ:
+                return request.environ["wsgi.file_wrapper"](out)
+            if not (hasattr(out, "close") or hasattr(out, "__iter__")):
                 return WSGIFileWrapper(out)
             try:
                 iout = iter(out)
@@ -921,7 +952,7 @@ class Bottle(object):
                     first = next(iout)
 
             except StopIteration:
-                return self._cast('')
+                return self._cast("")
             except HTTPResponse:
                 first = _e()
             except (KeyboardInterrupt, SystemExit, MemoryError):
@@ -930,7 +961,7 @@ class Bottle(object):
                 if not self.catchall:
                     raise
                 else:
-                    first = HTTPError(500, 'Unhandled exception', _e(), format_exc())
+                    first = HTTPError(500, "Unhandled exception", _e(), format_exc())
 
             if isinstance(first, HTTPResponse):
                 return self._cast(first)
@@ -941,9 +972,9 @@ class Bottle(object):
                     encoder = lambda x: x.encode(response.charset)
                     new_iter = imap(encoder, itertools.chain([first], iout))
                 else:
-                    msg = 'Unsupported response type: %s' % type(first)
+                    msg = "Unsupported response type: %s" % type(first)
                     return self._cast(HTTPError(500, msg))
-            if hasattr(out, 'close'):
+            if hasattr(out, "close"):
                 new_iter = _closeiter(new_iter, out.close)
             return new_iter
 
@@ -951,8 +982,11 @@ class Bottle(object):
         """ The bottle WSGI-interface. """
         try:
             out = self._cast(self._handle(environ))
-            if response._status_code in (100, 101, 204, 304) or environ['REQUEST_METHOD'] == 'HEAD':
-                if hasattr(out, 'close'):
+            if (
+                response._status_code in (100, 101, 204, 304)
+                or environ["REQUEST_METHOD"] == "HEAD"
+            ):
+                if hasattr(out, "close"):
                     out.close()
                 out = []
             start_response(response._status_line, response.headerlist)
@@ -962,15 +996,18 @@ class Bottle(object):
         except Exception:
             if not self.catchall:
                 raise
-            err = '<h1>Critical error while processing request: %s</h1>' % html_escape(environ.get('PATH_INFO', '/'))
+            err = "<h1>Critical error while processing request: %s</h1>" % html_escape(
+                environ.get("PATH_INFO", "/")
+            )
             if DEBUG:
-                err += '<h2>Error:</h2>\n<pre>\n%s\n</pre>\n<h2>Traceback:</h2>\n<pre>\n%s\n</pre>\n' % (
-                 html_escape(repr(_e())), html_escape(format_exc()))
-            environ['wsgi.errors'].write(err)
-            headers = [('Content-Type', 'text/html; charset=UTF-8')]
-            start_response('500 INTERNAL SERVER ERROR', headers, sys.exc_info())
-            return [
-             tob(err)]
+                err += (
+                    "<h2>Error:</h2>\n<pre>\n%s\n</pre>\n<h2>Traceback:</h2>\n<pre>\n%s\n</pre>\n"
+                    % (html_escape(repr(_e())), html_escape(format_exc()))
+                )
+            environ["wsgi.errors"].write(err)
+            headers = [("Content-Type", "text/html; charset=UTF-8")]
+            start_response("500 INTERNAL SERVER ERROR", headers, sys.exc_info())
+            return [tob(err)]
 
     def __call__(self, environ, start_response):
         """ Each instance of :class:'Bottle' is a WSGI application. """
@@ -979,41 +1016,41 @@ class Bottle(object):
 
 class BaseRequest(object):
     __doc__ = " A wrapper for WSGI environment dictionaries that adds a lot of\n        convenient access methods and properties. Most of them are read-only.\n\n        Adding new attributes to a request actually adds them to the environ\n        dictionary (as 'bottle.request.ext.<name>'). This is the recommended\n        way to store and access request-specific data.\n    "
-    __slots__ = 'environ'
+    __slots__ = "environ"
     MEMFILE_MAX = 102400
 
     def __init__(self, environ=None):
         """ Wrap a WSGI environ dictionary. """
         self.environ = {} if environ is None else environ
-        self.environ['bottle.request'] = self
+        self.environ["bottle.request"] = self
 
-    @DictProperty('environ', 'bottle.app', read_only=True)
+    @DictProperty("environ", "bottle.app", read_only=True)
     def app(self):
         """ Bottle application handling this request. """
-        raise RuntimeError('This request is not connected to an application.')
+        raise RuntimeError("This request is not connected to an application.")
 
-    @DictProperty('environ', 'bottle.route', read_only=True)
+    @DictProperty("environ", "bottle.route", read_only=True)
     def route(self):
         """ The bottle :class:`Route` object that matches this request. """
-        raise RuntimeError('This request is not connected to a route.')
+        raise RuntimeError("This request is not connected to a route.")
 
-    @DictProperty('environ', 'route.url_args', read_only=True)
+    @DictProperty("environ", "route.url_args", read_only=True)
     def url_args(self):
         """ The arguments extracted from the URL. """
-        raise RuntimeError('This request is not connected to a route.')
+        raise RuntimeError("This request is not connected to a route.")
 
     @property
     def path(self):
         """ The value of ``PATH_INFO`` with exactly one prefixed slash (to fix
             broken clients and avoid the "empty path" edge case). """
-        return '/' + self.environ.get('PATH_INFO', '').lstrip('/')
+        return "/" + self.environ.get("PATH_INFO", "").lstrip("/")
 
     @property
     def method(self):
         """ The ``REQUEST_METHOD`` value as an uppercase string. """
-        return self.environ.get('REQUEST_METHOD', 'GET').upper()
+        return self.environ.get("REQUEST_METHOD", "GET").upper()
 
-    @DictProperty('environ', 'bottle.request.headers', read_only=True)
+    @DictProperty("environ", "bottle.request.headers", read_only=True)
     def headers(self):
         """ A :class:`WSGIHeaderDict` that provides case-insensitive access to
             HTTP request headers. """
@@ -1023,11 +1060,11 @@ class BaseRequest(object):
         """ Return the value of a request header, or a given default value. """
         return self.headers.get(name, default)
 
-    @DictProperty('environ', 'bottle.request.cookies', read_only=True)
+    @DictProperty("environ", "bottle.request.cookies", read_only=True)
     def cookies(self):
         """ Cookies parsed into a :class:`FormsDict`. Signed cookies are NOT
             decoded. Use :meth:`get_cookie` if you expect signed cookies. """
-        cookies = SimpleCookie(self.environ.get('HTTP_COOKIE', '')).values()
+        cookies = SimpleCookie(self.environ.get("HTTP_COOKIE", "")).values()
         return FormsDict(((c.key, c.value) for c in cookies))
 
     def get_cookie(self, key, default=None, secret=None):
@@ -1045,20 +1082,20 @@ class BaseRequest(object):
                 return default
         return value or default
 
-    @DictProperty('environ', 'bottle.request.query', read_only=True)
+    @DictProperty("environ", "bottle.request.query", read_only=True)
     def query(self):
         """ The :attr:`query_string` parsed into a :class:`FormsDict`. These
             values are sometimes called "URL arguments" or "GET parameters", but
             not to be confused with "URL wildcards" as they are provided by the
             :class:`Router`. """
-        get = self.environ['bottle.get'] = FormsDict()
-        pairs = _parse_qsl(self.environ.get('QUERY_STRING', ''))
+        get = self.environ["bottle.get"] = FormsDict()
+        pairs = _parse_qsl(self.environ.get("QUERY_STRING", ""))
         for key, value in pairs:
             get[key] = value
 
         return get
 
-    @DictProperty('environ', 'bottle.request.forms', read_only=True)
+    @DictProperty("environ", "bottle.request.forms", read_only=True)
     def forms(self):
         """ Form values parsed from an `url-encoded` or `multipart/form-data`
             encoded POST or PUT request body. The result is returned as a
@@ -1071,7 +1108,7 @@ class BaseRequest(object):
 
         return forms
 
-    @DictProperty('environ', 'bottle.request.params', read_only=True)
+    @DictProperty("environ", "bottle.request.params", read_only=True)
     def params(self):
         """ A :class:`FormsDict` with the combined values of :attr:`query` and
             :attr:`forms`. File uploads are stored in :attr:`files`. """
@@ -1084,7 +1121,7 @@ class BaseRequest(object):
 
         return params
 
-    @DictProperty('environ', 'bottle.request.files', read_only=True)
+    @DictProperty("environ", "bottle.request.files", read_only=True)
     def files(self):
         """ File uploads parsed from `multipart/form-data` encoded POST or PUT
             request body. The values are instances of :class:`FileUpload`.
@@ -1097,14 +1134,14 @@ class BaseRequest(object):
 
         return files
 
-    @DictProperty('environ', 'bottle.request.json', read_only=True)
+    @DictProperty("environ", "bottle.request.json", read_only=True)
     def json(self):
         """ If the ``Content-Type`` header is ``application/json``, this
             property holds the parsed content of the request body. Only requests
             smaller than :attr:`MEMFILE_MAX` are processed to avoid memory
             exhaustion. """
-        ctype = self.environ.get('CONTENT_TYPE', '').lower().split(';')[0]
-        if ctype == 'application/json':
+        ctype = self.environ.get("CONTENT_TYPE", "").lower().split(";")[0]
+        if ctype == "application/json":
             b = self._get_body_string()
             if not b:
                 return
@@ -1121,8 +1158,8 @@ class BaseRequest(object):
                 maxread -= len(part)
 
     def _iter_chunked(self, read, bufsize):
-        err = HTTPError(400, 'Error while parsing chunked transfer body.')
-        rn, sem, bs = tob('\r\n'), tob(';'), tob('')
+        err = HTTPError(400, "Error while parsing chunked transfer body.")
+        rn, sem, bs = tob("\r\n"), tob(";"), tob("")
         while 1:
             header = read(1)
             while header[-2:] != rn:
@@ -1156,22 +1193,22 @@ class BaseRequest(object):
             if read(2) != rn:
                 raise err
 
-    @DictProperty('environ', 'bottle.request.body', read_only=True)
+    @DictProperty("environ", "bottle.request.body", read_only=True)
     def _body(self):
         body_iter = self._iter_chunked if self.chunked else self._iter_body
-        read_func = self.environ['wsgi.input'].read
+        read_func = self.environ["wsgi.input"].read
         body, body_size, is_temp_file = BytesIO(), 0, False
         for part in body_iter(read_func, self.MEMFILE_MAX):
             body.write(part)
             body_size += len(part)
             if not is_temp_file:
                 if body_size > self.MEMFILE_MAX:
-                    body, tmp = TemporaryFile(mode='w+b'), body
+                    body, tmp = TemporaryFile(mode="w+b"), body
                     body.write(tmp.getvalue())
                     del tmp
                     is_temp_file = True
 
-        self.environ['wsgi.input'] = body
+        self.environ["wsgi.input"] = body
         body.seek(0)
         return body
 
@@ -1180,12 +1217,12 @@ class BaseRequest(object):
             HTTPError(413) on requests that are to large. """
         clen = self.content_length
         if clen > self.MEMFILE_MAX:
-            raise HTTPError(413, 'Request to large')
+            raise HTTPError(413, "Request to large")
         if clen < 0:
             clen = self.MEMFILE_MAX + 1
         data = self.body.read(clen)
         if len(data) > self.MEMFILE_MAX:
-            raise HTTPError(413, 'Request to large')
+            raise HTTPError(413, "Request to large")
         return data
 
     @property
@@ -1201,40 +1238,42 @@ class BaseRequest(object):
     @property
     def chunked(self):
         """ True if Chunked transfer encoding was. """
-        return 'chunked' in self.environ.get('HTTP_TRANSFER_ENCODING', '').lower()
+        return "chunked" in self.environ.get("HTTP_TRANSFER_ENCODING", "").lower()
 
     GET = query
 
-    @DictProperty('environ', 'bottle.request.post', read_only=True)
+    @DictProperty("environ", "bottle.request.post", read_only=True)
     def POST(self):
         """ The values of :attr:`forms` and :attr:`files` combined into a single
             :class:`FormsDict`. Values are either strings (form values) or
             instances of :class:`cgi.FieldStorage` (file uploads).
         """
         post = FormsDict()
-        if not self.content_type.startswith('multipart/'):
-            pairs = _parse_qsl(tonat(self._get_body_string(), 'latin1'))
+        if not self.content_type.startswith("multipart/"):
+            pairs = _parse_qsl(tonat(self._get_body_string(), "latin1"))
             for key, value in pairs:
                 post[key] = value
 
             return post
-        safe_env = {'QUERY_STRING': ''}
-        for key in ('REQUEST_METHOD', 'CONTENT_TYPE', 'CONTENT_LENGTH'):
+        safe_env = {"QUERY_STRING": ""}
+        for key in ("REQUEST_METHOD", "CONTENT_TYPE", "CONTENT_LENGTH"):
             if key in self.environ:
                 safe_env[key] = self.environ[key]
 
         args = dict(fp=(self.body), environ=safe_env, keep_blank_values=True)
         if py31:
-            args['fp'] = NCTextIOWrapper((args['fp']), encoding='utf8', newline='\n')
+            args["fp"] = NCTextIOWrapper((args["fp"]), encoding="utf8", newline="\n")
         else:
             if py3k:
-                args['encoding'] = 'utf8'
+                args["encoding"] = "utf8"
         data = (cgi.FieldStorage)(**args)
-        self['_cgi.FieldStorage'] = data
+        self["_cgi.FieldStorage"] = data
         data = data.list or []
         for item in data:
             if item.filename:
-                post[item.name] = FileUpload(item.file, item.name, item.filename, item.headers)
+                post[item.name] = FileUpload(
+                    item.file, item.name, item.filename, item.headers
+                )
             else:
                 post[item.name] = item.value
 
@@ -1248,34 +1287,34 @@ class BaseRequest(object):
             correctly. """
         return self.urlparts.geturl()
 
-    @DictProperty('environ', 'bottle.request.urlparts', read_only=True)
+    @DictProperty("environ", "bottle.request.urlparts", read_only=True)
     def urlparts(self):
         """ The :attr:`url` string as an :class:`urlparse.SplitResult` tuple.
             The tuple contains (scheme, host, path, query_string and fragment),
             but the fragment is always empty because it is not visible to the
             server. """
         env = self.environ
-        http = env.get('HTTP_X_FORWARDED_PROTO') or env.get('wsgi.url_scheme', 'http')
-        host = env.get('HTTP_X_FORWARDED_HOST') or env.get('HTTP_HOST')
+        http = env.get("HTTP_X_FORWARDED_PROTO") or env.get("wsgi.url_scheme", "http")
+        host = env.get("HTTP_X_FORWARDED_HOST") or env.get("HTTP_HOST")
         if not host:
-            host = env.get('SERVER_NAME', '127.0.0.1')
-            port = env.get('SERVER_PORT')
+            host = env.get("SERVER_NAME", "127.0.0.1")
+            port = env.get("SERVER_PORT")
             if port:
-                if port != ('80' if http == 'http' else '443'):
-                    host += ':' + port
+                if port != ("80" if http == "http" else "443"):
+                    host += ":" + port
         path = urlquote(self.fullpath)
-        return UrlSplitResult(http, host, path, env.get('QUERY_STRING'), '')
+        return UrlSplitResult(http, host, path, env.get("QUERY_STRING"), "")
 
     @property
     def fullpath(self):
         """ Request path including :attr:`script_name` (if present). """
-        return urljoin(self.script_name, self.path.lstrip('/'))
+        return urljoin(self.script_name, self.path.lstrip("/"))
 
     @property
     def query_string(self):
         """ The raw :attr:`query` part of the URL (everything in between ``?``
             and ``#``) as a string. """
-        return self.environ.get('QUERY_STRING', '')
+        return self.environ.get("QUERY_STRING", "")
 
     @property
     def script_name(self):
@@ -1283,10 +1322,10 @@ class BaseRequest(object):
             level (server or routing middleware) before the application was
             called. This script path is returned with leading and tailing
             slashes. """
-        script_name = self.environ.get('SCRIPT_NAME', '').strip('/')
+        script_name = self.environ.get("SCRIPT_NAME", "").strip("/")
         if script_name:
-            return '/' + script_name + '/'
-        return '/'
+            return "/" + script_name + "/"
+        return "/"
 
     def path_shift(self, shift=1):
         """ Shift path segments from :attr:`path` to :attr:`script_name` and
@@ -1295,28 +1334,28 @@ class BaseRequest(object):
            :param shift: The number of path segments to shift. May be negative
                          to change the shift direction. (default: 1)
         """
-        script = self.environ.get('SCRIPT_NAME', '/')
-        self['SCRIPT_NAME'], self['PATH_INFO'] = path_shift(script, self.path, shift)
+        script = self.environ.get("SCRIPT_NAME", "/")
+        self["SCRIPT_NAME"], self["PATH_INFO"] = path_shift(script, self.path, shift)
 
     @property
     def content_length(self):
         """ The request body length as an integer. The client is responsible to
             set this header. Otherwise, the real length of the body is unknown
             and -1 is returned. In this case, :attr:`body` will be empty. """
-        return int(self.environ.get('CONTENT_LENGTH') or -1)
+        return int(self.environ.get("CONTENT_LENGTH") or -1)
 
     @property
     def content_type(self):
         """ The Content-Type header as a lowercase-string (default: empty). """
-        return self.environ.get('CONTENT_TYPE', '').lower()
+        return self.environ.get("CONTENT_TYPE", "").lower()
 
     @property
     def is_xhr(self):
         """ True if the request was triggered by a XMLHttpRequest. This only
             works with JavaScript libraries that support the `X-Requested-With`
             header (most of the popular libraries do). """
-        requested_with = self.environ.get('HTTP_X_REQUESTED_WITH', '')
-        return requested_with.lower() == 'xmlhttprequest'
+        requested_with = self.environ.get("HTTP_X_REQUESTED_WITH", "")
+        return requested_with.lower() == "xmlhttprequest"
 
     @property
     def is_ajax(self):
@@ -1331,13 +1370,12 @@ class BaseRequest(object):
             front web-server or a middleware), the password field is None, but
             the user field is looked up from the ``REMOTE_USER`` environ
             variable. On any errors, None is returned. """
-        basic = parse_auth(self.environ.get('HTTP_AUTHORIZATION', ''))
+        basic = parse_auth(self.environ.get("HTTP_AUTHORIZATION", ""))
         if basic:
             return basic
-        ruser = self.environ.get('REMOTE_USER')
+        ruser = self.environ.get("REMOTE_USER")
         if ruser:
-            return (
-             ruser, None)
+            return (ruser, None)
 
     @property
     def remote_route(self):
@@ -1345,10 +1383,10 @@ class BaseRequest(object):
             the client IP and followed by zero or more proxies. This does only
             work if all proxies support the ```X-Forwarded-For`` header. Note
             that this information can be forged by malicious clients. """
-        proxy = self.environ.get('HTTP_X_FORWARDED_FOR')
+        proxy = self.environ.get("HTTP_X_FORWARDED_FOR")
         if proxy:
-            return [ip.strip() for ip in proxy.split(',')]
-        remote = self.environ.get('REMOTE_ADDR')
+            return [ip.strip() for ip in proxy.split(",")]
+        remote = self.environ.get("REMOTE_ADDR")
         if remote:
             return [remote]
         return []
@@ -1372,7 +1410,7 @@ class BaseRequest(object):
         return self.environ[key]
 
     def __delitem__(self, key):
-        self[key] = ''
+        self[key] = ""
         del self.environ[key]
 
     def __iter__(self):
@@ -1386,61 +1424,64 @@ class BaseRequest(object):
 
     def __setitem__(self, key, value):
         """ Change an environ value and clear all caches that depend on it. """
-        if self.environ.get('bottle.request.readonly'):
-            raise KeyError('The environ dictionary is read-only.')
+        if self.environ.get("bottle.request.readonly"):
+            raise KeyError("The environ dictionary is read-only.")
         self.environ[key] = value
         todelete = ()
-        if key == 'wsgi.input':
-            todelete = ('body', 'forms', 'files', 'params', 'post', 'json')
+        if key == "wsgi.input":
+            todelete = ("body", "forms", "files", "params", "post", "json")
         else:
-            if key == 'QUERY_STRING':
-                todelete = ('query', 'params')
+            if key == "QUERY_STRING":
+                todelete = ("query", "params")
             else:
-                if key.startswith('HTTP_'):
-                    todelete = ('headers', 'cookies')
+                if key.startswith("HTTP_"):
+                    todelete = ("headers", "cookies")
         for key in todelete:
-            self.environ.pop('bottle.request.' + key, None)
+            self.environ.pop("bottle.request." + key, None)
 
     def __repr__(self):
-        return '<%s: %s %s>' % (self.__class__.__name__, self.method, self.url)
+        return "<%s: %s %s>" % (self.__class__.__name__, self.method, self.url)
 
     def __getattr__(self, name):
         """ Search in self.environ for additional user defined attributes. """
         try:
-            var = self.environ['bottle.request.ext.%s' % name]
-            if hasattr(var, '__get__'):
+            var = self.environ["bottle.request.ext.%s" % name]
+            if hasattr(var, "__get__"):
                 return var.__get__(self)
             return var
         except KeyError:
-            raise AttributeError('Attribute %r not defined.' % name)
+            raise AttributeError("Attribute %r not defined." % name)
 
     def __setattr__(self, name, value):
-        if name == 'environ':
+        if name == "environ":
             return object.__setattr__(self, name, value)
-        self.environ['bottle.request.ext.%s' % name] = value
+        self.environ["bottle.request.ext.%s" % name] = value
 
 
 def _hkey(key):
-    if not '\n' in key:
-        if '\r' in key or '\x00' in key:
-            raise ValueError('Header names must not contain control characters: %r' % key)
-        return key.title().replace('_', '-')
+    if not "\n" in key:
+        if "\r" in key or "\x00" in key:
+            raise ValueError(
+                "Header names must not contain control characters: %r" % key
+            )
+        return key.title().replace("_", "-")
 
 
 def _hval(value):
     value = tonat(value)
-    if not '\n' in value:
-        if '\r' in value or '\x00' in value:
-            raise ValueError('Header value must not contain control characters: %r' % value)
+    if not "\n" in value:
+        if "\r" in value or "\x00" in value:
+            raise ValueError(
+                "Header value must not contain control characters: %r" % value
+            )
         return value
 
 
 class HeaderProperty(object):
-
-    def __init__(self, name, reader=None, writer=None, default=''):
+    def __init__(self, name, reader=None, writer=None, default=""):
         self.name, self.default = name, default
         self.reader, self.writer = reader, writer
-        self.__doc__ = 'Current value of the %r header.' % name.title()
+        self.__doc__ = "Current value of the %r header." % name.title()
 
     def __get__(self, obj, cls):
         if obj is None:
@@ -1460,12 +1501,24 @@ class HeaderProperty(object):
 class BaseResponse(object):
     __doc__ = " Storage class for a response body as well as headers and cookies.\n\n        This class does support dict-like case-insensitive item-access to\n        headers, but is NOT a dict. Most notably, iterating over a response\n        yields parts of the body and not the headers.\n\n        :param body: The response body as one of the supported types.\n        :param status: Either an HTTP status code (e.g. 200) or a status line\n                       including the reason phrase (e.g. '200 OK').\n        :param headers: A dictionary or a list of name-value pairs.\n\n        Additional keyword arguments are added to the list of headers.\n        Underscores in the header name are replaced with dashes.\n    "
     default_status = 200
-    default_content_type = 'text/html; charset=UTF-8'
-    bad_headers = {204:set(('Content-Type', )), 
-     304:set(('Allow', 'Content-Encoding', 'Content-Language', 'Content-Length', 'Content-Range',
-     'Content-Type', 'Content-Md5', 'Last-Modified'))}
+    default_content_type = "text/html; charset=UTF-8"
+    bad_headers = {
+        204: set(("Content-Type",)),
+        304: set(
+            (
+                "Allow",
+                "Content-Encoding",
+                "Content-Language",
+                "Content-Length",
+                "Content-Range",
+                "Content-Type",
+                "Content-Md5",
+                "Last-Modified",
+            )
+        ),
+    }
 
-    def __init__(self, body='', status=None, headers=None, **more_headers):
+    def __init__(self, body="", status=None, headers=None, **more_headers):
         self._cookies = None
         self._headers = {}
         self.body = body
@@ -1489,14 +1542,14 @@ class BaseResponse(object):
         copy._headers = dict(((k, v[:]) for k, v in self._headers.items()))
         if self._cookies:
             copy._cookies = SimpleCookie()
-            copy._cookies.load(self._cookies.output(header=''))
+            copy._cookies.load(self._cookies.output(header=""))
         return copy
 
     def __iter__(self):
         return iter(self.body)
 
     def close(self):
-        if hasattr(self.body, 'close'):
+        if hasattr(self.body, "close"):
             self.body.close()
 
     @property
@@ -1513,20 +1566,25 @@ class BaseResponse(object):
         if isinstance(status, int):
             code, status = status, _HTTP_STATUS_LINES.get(status)
         else:
-            if ' ' in status:
+            if " " in status:
                 status = status.strip()
                 code = int(status.split()[0])
             else:
-                raise ValueError('String status line without a reason phrase.')
-        if not 100<= code <= 999:
-            raise ValueError('Status code out of range.')
+                raise ValueError("String status line without a reason phrase.")
+        if not 100 <= code <= 999:
+            raise ValueError("Status code out of range.")
         self._status_code = code
-        self._status_line = str(status or '%d Unknown' % code)
+        self._status_line = str(status or "%d Unknown" % code)
 
     def _get_status(self):
         return self._status_line
 
-    status = property(_get_status, _set_status, None, ' A writeable property to change the HTTP response status. It accepts\n            either a numeric code (100-999) or a string with a custom reason\n            phrase (e.g. "404 Brain not found"). Both :data:`status_line` and\n            :data:`status_code` are updated accordingly. The return value is\n            always a status string. ')
+    status = property(
+        _get_status,
+        _set_status,
+        None,
+        ' A writeable property to change the HTTP response status. It accepts\n            either a numeric code (100-999) or a string with a custom reason\n            phrase (e.g. "404 Brain not found"). Both :data:`status_line` and\n            :data:`status_code` are updated accordingly. The return value is\n            always a status string. ',
+    )
     del _get_status
     del _set_status
 
@@ -1548,8 +1606,7 @@ class BaseResponse(object):
         return self._headers[_hkey(name)][-1]
 
     def __setitem__(self, name, value):
-        self._headers[_hkey(name)] = [
-         _hval(value)]
+        self._headers[_hkey(name)] = [_hval(value)]
 
     def get_header(self, name, default=None):
         """ Return the value of a previously defined header. If there is no
@@ -1559,8 +1616,7 @@ class BaseResponse(object):
     def set_header(self, name, value):
         """ Create a new response header, replacing any previously defined
             headers with the same name. """
-        self._headers[_hkey(name)] = [
-         _hval(value)]
+        self._headers[_hkey(name)] = [_hval(value)]
 
     def add_header(self, name, value):
         """ Add an additional response header, not removing duplicates. """
@@ -1576,32 +1632,33 @@ class BaseResponse(object):
         """ WSGI conform list of (header, value) tuples. """
         out = []
         headers = list(self._headers.items())
-        if 'Content-Type' not in self._headers:
-            headers.append(('Content-Type', [self.default_content_type]))
+        if "Content-Type" not in self._headers:
+            headers.append(("Content-Type", [self.default_content_type]))
         if self._status_code in self.bad_headers:
             bad_headers = self.bad_headers[self._status_code]
             headers = [h for h in headers if h[0] not in bad_headers]
         out += [(name, val) for name, vals in headers for val in iter(vals)]
         if self._cookies:
             for c in self._cookies.values():
-                out.append(('Set-Cookie', _hval(c.OutputString())))
+                out.append(("Set-Cookie", _hval(c.OutputString())))
 
         if py3k:
-            out = [(k, v.encode('utf8').decode('latin1')) for k, v in out]
+            out = [(k, v.encode("utf8").decode("latin1")) for k, v in out]
         return out
 
-    content_type = HeaderProperty('Content-Type')
-    content_length = HeaderProperty('Content-Length', reader=int)
-    expires = HeaderProperty('Expires', reader=(lambda x: datetime.utcfromtimestamp(parse_date(x))
-),
-      writer=(lambda x: http_date(x)
-))
+    content_type = HeaderProperty("Content-Type")
+    content_length = HeaderProperty("Content-Length", reader=int)
+    expires = HeaderProperty(
+        "Expires",
+        reader=(lambda x: datetime.utcfromtimestamp(parse_date(x))),
+        writer=(lambda x: http_date(x)),
+    )
 
     @property
-    def charset(self, default='UTF-8'):
+    def charset(self, default="UTF-8"):
         """ Return the charset specified in the content-type header (default: utf8). """
-        if 'charset=' in self.content_type:
-            return self.content_type.split('charset=')[-1].split(';')[0].strip()
+        if "charset=" in self.content_type:
+            return self.content_type.split("charset=")[-1].split(";")[0].strip()
         return default
 
     def set_cookie(self, name, value, secret=None, **options):
@@ -1643,49 +1700,49 @@ class BaseResponse(object):
             value = touni(cookie_encode((name, value), secret))
         else:
             if not isinstance(value, basestring):
-                raise TypeError('Secret key missing for non-string Cookie.')
+                raise TypeError("Secret key missing for non-string Cookie.")
         if len(value) > 4096:
-            raise ValueError('Cookie value to long.')
+            raise ValueError("Cookie value to long.")
         self._cookies[name] = value
         for key, value in options.items():
-            if key == 'max_age':
+            if key == "max_age":
                 if isinstance(value, timedelta):
                     value = value.seconds + value.days * 24 * 3600
-            if key == 'expires':
+            if key == "expires":
                 if isinstance(value, (datedate, datetime)):
                     value = value.timetuple()
                 else:
                     if isinstance(value, (int, float)):
                         value = time.gmtime(value)
-                value = time.strftime('%a, %d %b %Y %H:%M:%S GMT', value)
+                value = time.strftime("%a, %d %b %Y %H:%M:%S GMT", value)
             else:
-                self._cookies[name][key.replace('_', '-')] = value
+                self._cookies[name][key.replace("_", "-")] = value
 
     def delete_cookie(self, key, **kwargs):
         """ Delete a cookie. Be sure to use the same `domain` and `path`
             settings as used to create the cookie. """
-        kwargs['max_age'] = -1
-        kwargs['expires'] = 0
-        (self.set_cookie)(key, '', **kwargs)
+        kwargs["max_age"] = -1
+        kwargs["expires"] = 0
+        (self.set_cookie)(key, "", **kwargs)
 
     def __repr__(self):
-        out = ''
+        out = ""
         for name, value in self.headerlist:
-            out += '%s: %s\n' % (name.title(), value.strip())
+            out += "%s: %s\n" % (name.title(), value.strip())
 
         return out
 
 
 def local_property(name=None):
     if name:
-        depr('local_property() is deprecated and will be removed.')
+        depr("local_property() is deprecated and will be removed.")
     ls = threading.local()
 
     def fget(self):
         try:
             return ls.var
         except AttributeError:
-            raise RuntimeError('Request context not initialized.')
+            raise RuntimeError("Request context not initialized.")
 
     def fset(self, value):
         ls.var = value
@@ -1693,17 +1750,17 @@ def local_property(name=None):
     def fdel(self):
         del ls.var
 
-    return property(fget, fset, fdel, 'Thread-local property')
+    return property(fget, fset, fdel, "Thread-local property")
 
 
 class LocalRequest(BaseRequest):
-    __doc__ = ' A thread-local subclass of :class:`BaseRequest` with a different\n        set of attributes for each thread. There is usually only one global\n        instance of this class (:data:`request`). If accessed during a\n        request/response cycle, this instance always refers to the *current*\n        request (even on a multithreaded server). '
+    __doc__ = " A thread-local subclass of :class:`BaseRequest` with a different\n        set of attributes for each thread. There is usually only one global\n        instance of this class (:data:`request`). If accessed during a\n        request/response cycle, this instance always refers to the *current*\n        request (even on a multithreaded server). "
     bind = BaseRequest.__init__
     environ = local_property()
 
 
 class LocalResponse(BaseResponse):
-    __doc__ = ' A thread-local subclass of :class:`BaseResponse` with a different\n        set of attributes for each thread. There is usually only one global\n        instance of this class (:data:`response`). Its attributes are used\n        to build the HTTP response at the end of the request/response cycle.\n    '
+    __doc__ = " A thread-local subclass of :class:`BaseResponse` with a different\n        set of attributes for each thread. There is usually only one global\n        instance of this class (:data:`response`). Its attributes are used\n        to build the HTTP response at the end of the request/response cycle.\n    "
     bind = BaseResponse.__init__
     _status_line = local_property()
     _status_code = local_property()
@@ -1715,9 +1772,9 @@ class LocalResponse(BaseResponse):
 Request = BaseRequest
 Response = BaseResponse
 
-class HTTPResponse(Response, BottleException):
 
-    def __init__(self, body='', status=None, headers=None, **more_headers):
+class HTTPResponse(Response, BottleException):
+    def __init__(self, body="", status=None, headers=None, **more_headers):
         (super(HTTPResponse, self).__init__)(body, status, headers, **more_headers)
 
     def apply(self, response):
@@ -1731,7 +1788,9 @@ class HTTPResponse(Response, BottleException):
 class HTTPError(HTTPResponse):
     default_status = 500
 
-    def __init__(self, status=None, body=None, exception=None, traceback=None, **options):
+    def __init__(
+        self, status=None, body=None, exception=None, traceback=None, **options
+    ):
         self.exception = exception
         self.traceback = traceback
         (super(HTTPError, self).__init__)(body, status, **options)
@@ -1742,7 +1801,7 @@ class PluginError(BottleException):
 
 
 class JSONPlugin(object):
-    name = 'json'
+    name = "json"
     api = 2
 
     def __init__(self, json_dumps=json_dumps):
@@ -1761,24 +1820,24 @@ class JSONPlugin(object):
 
             if isinstance(rv, dict):
                 json_response = dumps(rv)
-                response.content_type = 'application/json'
+                response.content_type = "application/json"
                 return json_response
             if isinstance(rv, HTTPResponse):
                 if isinstance(rv.body, dict):
                     rv.body = dumps(rv.body)
-                    rv.content_type = 'application/json'
+                    rv.content_type = "application/json"
             return rv
 
         return wrapper
 
 
 class TemplatePlugin(object):
-    __doc__ = ' This plugin applies the :func:`view` decorator to all routes with a\n        `template` config parameter. If the parameter is a tuple, the second\n        element must be a dict with additional options (e.g. `template_engine`)\n        or default variables for the template. '
-    name = 'template'
+    __doc__ = " This plugin applies the :func:`view` decorator to all routes with a\n        `template` config parameter. If the parameter is a tuple, the second\n        element must be a dict with additional options (e.g. `template_engine`)\n        or default variables for the template. "
+    name = "template"
     api = 2
 
     def apply(self, callback, route):
-        conf = route.config.get('template')
+        conf = route.config.get("template")
         if isinstance(conf, (tuple, list)):
             if len(conf) == 2:
                 return view((conf[0]), **conf[1])(callback)
@@ -1788,19 +1847,20 @@ class TemplatePlugin(object):
 
 
 class _ImportRedirect(object):
-
     def __init__(self, name, impmask):
         """ Create a virtual package that redirects imports (see PEP 302). """
         self.name = name
         self.impmask = impmask
         self.module = sys.modules.setdefault(name, new_module(name))
-        self.module.__dict__.update({'__file__':__file__,  '__path__':[],  '__all__':[],  '__loader__':self})
+        self.module.__dict__.update(
+            {"__file__": __file__, "__path__": [], "__all__": [], "__loader__": self}
+        )
         sys.meta_path.append(self)
 
     def find_module(self, fullname, path=None):
-        if '.' not in fullname:
+        if "." not in fullname:
             return
-        packname = fullname.rsplit('.', 1)[0]
+        packname = fullname.rsplit(".", 1)[0]
         if packname != self.name:
             return
         return self
@@ -1808,7 +1868,7 @@ class _ImportRedirect(object):
     def load_module(self, fullname):
         if fullname in sys.modules:
             return sys.modules[fullname]
-        modname = fullname.rsplit('.', 1)[1]
+        modname = fullname.rsplit(".", 1)[1]
         realname = self.impmask % modname
         __import__(realname)
         module = sys.modules[fullname] = sys.modules[realname]
@@ -1818,7 +1878,7 @@ class _ImportRedirect(object):
 
 
 class MultiDict(DictMixin):
-    __doc__ = ' This dict stores multiple values per key, but behaves exactly like a\n        normal dict in that it returns only the newest value for any given key.\n        There are special methods available to access the full list of values.\n    '
+    __doc__ = " This dict stores multiple values per key, but behaves exactly like a\n        normal dict in that it returns only the newest value for any given key.\n        There are special methods available to access the full list of values.\n    "
 
     def __init__(self, *a, **k):
         self.dict = dict(((k, [v]) for k, v in dict(*a, **k).items()))
@@ -1908,8 +1968,7 @@ class MultiDict(DictMixin):
 
     def replace(self, key, value):
         """ Replace the list of values with a single value. """
-        self.dict[key] = [
-         value]
+        self.dict[key] = [value]
 
     def getall(self, key):
         """ Return a (possibly empty) list of values for a key. """
@@ -1921,13 +1980,13 @@ class MultiDict(DictMixin):
 
 class FormsDict(MultiDict):
     __doc__ = " This :class:`MultiDict` subclass is used to store request form data.\n        Additionally to the normal dict-like item access methods (which return\n        unmodified data as native strings), this container also supports\n        attribute-like access to its values. Attributes are automatically de-\n        or recoded to match :attr:`input_encoding` (default: 'utf8'). Missing\n        attributes default to an empty string. "
-    input_encoding = 'utf8'
+    input_encoding = "utf8"
     recode_unicode = True
 
     def _fix(self, s, encoding=None):
         if isinstance(s, unicode):
             if self.recode_unicode:
-                return s.encode('latin1').decode(encoding or self.input_encoding)
+                return s.encode("latin1").decode(encoding or self.input_encoding)
         if isinstance(s, bytes):
             return s.decode(encoding or self.input_encoding)
         return s
@@ -1952,14 +2011,14 @@ class FormsDict(MultiDict):
             return default
 
     def __getattr__(self, name, default=unicode()):
-        if name.startswith('__'):
-            if name.endswith('__'):
+        if name.startswith("__"):
+            if name.endswith("__"):
                 return super(FormsDict, self).__getattr__(name)
         return self.getunicode(name, default=default)
 
 
 class HeaderDict(MultiDict):
-    __doc__ = ' A case-insensitive version of :class:`MultiDict` that defaults to\n        replace the old value instead of appending it. '
+    __doc__ = " A case-insensitive version of :class:`MultiDict` that defaults to\n        replace the old value instead of appending it. "
 
     def __init__(self, *a, **ka):
         self.dict = {}
@@ -1976,15 +2035,13 @@ class HeaderDict(MultiDict):
         return self.dict[_hkey(key)][-1]
 
     def __setitem__(self, key, value):
-        self.dict[_hkey(key)] = [
-         _hval(value)]
+        self.dict[_hkey(key)] = [_hval(value)]
 
     def append(self, key, value):
         self.dict.setdefault(_hkey(key), []).append(_hval(value))
 
     def replace(self, key, value):
-        self.dict[_hkey(key)] = [
-         _hval(value)]
+        self.dict[_hkey(key)] = [_hval(value)]
 
     def getall(self, key):
         return self.dict.get(_hkey(key)) or []
@@ -2000,37 +2057,37 @@ class HeaderDict(MultiDict):
 
 class WSGIHeaderDict(DictMixin):
     __doc__ = " This dict-like class wraps a WSGI environ dict and provides convenient\n        access to HTTP_* fields. Keys and values are native strings\n        (2.x bytes or 3.x unicode) and keys are case-insensitive. If the WSGI\n        environment contains non-native string values, these are de- or encoded\n        using a lossless 'latin1' character set.\n\n        The API will remain stable even on changes to the relevant PEPs.\n        Currently PEP 333, 444 and 3333 are supported. (PEP 444 is the only one\n        that uses non-native strings.)\n    "
-    cgikeys = ('CONTENT_TYPE', 'CONTENT_LENGTH')
+    cgikeys = ("CONTENT_TYPE", "CONTENT_LENGTH")
 
     def __init__(self, environ):
         self.environ = environ
 
     def _ekey(self, key):
         """ Translate header field name to CGI/WSGI environ key. """
-        key = key.replace('-', '_').upper()
+        key = key.replace("-", "_").upper()
         if key in self.cgikeys:
             return key
-        return 'HTTP_' + key
+        return "HTTP_" + key
 
     def raw(self, key, default=None):
         """ Return the header value as is (may be bytes or unicode). """
         return self.environ.get(self._ekey(key), default)
 
     def __getitem__(self, key):
-        return tonat(self.environ[self._ekey(key)], 'latin1')
+        return tonat(self.environ[self._ekey(key)], "latin1")
 
     def __setitem__(self, key, value):
-        raise TypeError('%s is read-only.' % self.__class__)
+        raise TypeError("%s is read-only." % self.__class__)
 
     def __delitem__(self, key):
-        raise TypeError('%s is read-only.' % self.__class__)
+        raise TypeError("%s is read-only." % self.__class__)
 
     def __iter__(self):
         for key in self.environ:
-            if key[:5] == 'HTTP_':
-                yield key[5:].replace('_', '-').title()
+            if key[:5] == "HTTP_":
+                yield key[5:].replace("_", "-").title()
             if key in self.cgikeys:
-                yield key.replace('_', '-').title()
+                yield key.replace("_", "-").title()
 
     def keys(self):
         return [x for x in self]
@@ -2043,29 +2100,30 @@ class WSGIHeaderDict(DictMixin):
 
 
 class ConfigDict(dict):
-    __doc__ = ' A dict-like configuration storage with additional support for\n        namespaces, validators, meta-data, on_change listeners and more.\n\n        This storage is optimized for fast read access. Retrieving a key\n        or using non-altering dict methods (e.g. `dict.get()`) has no overhead\n        compared to a native dict.\n    '
-    __slots__ = ('_meta', '_on_change')
+    __doc__ = " A dict-like configuration storage with additional support for\n        namespaces, validators, meta-data, on_change listeners and more.\n\n        This storage is optimized for fast read access. Retrieving a key\n        or using non-altering dict methods (e.g. `dict.get()`) has no overhead\n        compared to a native dict.\n    "
+    __slots__ = ("_meta", "_on_change")
 
     class Namespace(DictMixin):
-
         def __init__(self, config, namespace):
             self._config = config
             self._prefix = namespace
 
         def __getitem__(self, key):
-            depr('Accessing namespaces as dicts is discouraged. Only use flat item access: cfg["names"]["pace"]["key"] -> cfg["name.space.key"]')
-            return self._config[self._prefix + '.' + key]
+            depr(
+                'Accessing namespaces as dicts is discouraged. Only use flat item access: cfg["names"]["pace"]["key"] -> cfg["name.space.key"]'
+            )
+            return self._config[self._prefix + "." + key]
 
         def __setitem__(self, key, value):
-            self._config[self._prefix + '.' + key] = value
+            self._config[self._prefix + "." + key] = value
 
         def __delitem__(self, key):
-            del self._config[self._prefix + '.' + key]
+            del self._config[self._prefix + "." + key]
 
         def __iter__(self):
-            ns_prefix = self._prefix + '.'
+            ns_prefix = self._prefix + "."
             for key in self._config:
-                ns, dot, name = key.rpartition('.')
+                ns, dot, name = key.rpartition(".")
                 if ns == self._prefix:
                     if name:
                         yield name
@@ -2077,48 +2135,50 @@ class ConfigDict(dict):
             return len(self.keys())
 
         def __contains__(self, key):
-            return self._prefix + '.' + key in self._config
+            return self._prefix + "." + key in self._config
 
         def __repr__(self):
-            return '<Config.Namespace %s.*>' % self._prefix
+            return "<Config.Namespace %s.*>" % self._prefix
 
         def __str__(self):
-            return '<Config.Namespace %s.*>' % self._prefix
+            return "<Config.Namespace %s.*>" % self._prefix
 
         def __getattr__(self, key):
-            depr('Attribute access is deprecated.')
+            depr("Attribute access is deprecated.")
             if key not in self:
                 if key[0].isupper():
-                    self[key] = ConfigDict.Namespace(self._config, self._prefix + '.' + key)
+                    self[key] = ConfigDict.Namespace(
+                        self._config, self._prefix + "." + key
+                    )
             if key not in self:
-                if key.startswith('__'):
+                if key.startswith("__"):
                     raise AttributeError(key)
             return self.get(key)
 
         def __setattr__(self, key, value):
-            if key in ('_config', '_prefix'):
+            if key in ("_config", "_prefix"):
                 self.__dict__[key] = value
                 return
-            depr('Attribute assignment is deprecated.')
+            depr("Attribute assignment is deprecated.")
             if hasattr(DictMixin, key):
-                raise AttributeError('Read-only attribute.')
+                raise AttributeError("Read-only attribute.")
             if key in self:
                 if self[key]:
                     if isinstance(self[key], self.__class__):
-                        raise AttributeError('Non-empty namespace attribute.')
+                        raise AttributeError("Non-empty namespace attribute.")
             self[key] = value
 
         def __delattr__(self, key):
             if key in self:
                 val = self.pop(key)
                 if isinstance(val, self.__class__):
-                    prefix = key + '.'
+                    prefix = key + "."
                     for key in self:
                         if key.startswith(prefix):
                             del self[prefix + key]
 
         def __call__(self, *a, **ka):
-            depr('Calling ConfDict is deprecated. Use the update() method.')
+            depr("Calling ConfDict is deprecated. Use the update() method.")
             (self.update)(*a, **ka)
             return self
 
@@ -2126,7 +2186,7 @@ class ConfigDict(dict):
         self._meta = {}
         self._on_change = lambda name, value: None
         if a or ka:
-            depr('Constructor does no longer accept parameters.')
+            depr("Constructor does no longer accept parameters.")
             (self.update)(*a, **ka)
 
     def load_config(self, filename):
@@ -2140,33 +2200,31 @@ class ConfigDict(dict):
         conf.read(filename)
         for section in conf.sections():
             for key, value in conf.items(section):
-                if section not in ('DEFAULT', 'bottle'):
-                    key = section + '.' + key
+                if section not in ("DEFAULT", "bottle"):
+                    key = section + "." + key
                 else:
                     self[key] = value
 
         return self
 
-    def load_dict(self, source, namespace='', make_namespaces=False):
+    def load_dict(self, source, namespace="", make_namespaces=False):
         """ Import values from a dictionary structure. Nesting can be used to
             represent namespaces.
 
             >>> ConfigDict().load_dict({'name': {'space': {'key': 'value'}}})
             {'name.space.key': 'value'}
         """
-        stack = [
-         (
-          namespace, source)]
+        stack = [(namespace, source)]
         while stack:
             prefix, source = stack.pop()
             if not isinstance(source, dict):
-                raise TypeError('Source is not a dict (r)' % type(key))
+                raise TypeError("Source is not a dict (r)" % type(key))
             else:
                 for key, value in source.items():
                     if not isinstance(key, basestring):
-                        raise TypeError('Key is not a string (%r)' % type(key))
+                        raise TypeError("Key is not a string (%r)" % type(key))
                     else:
-                        full_key = prefix + '.' + key if prefix else key
+                        full_key = prefix + "." + key if prefix else key
                     if isinstance(value, dict):
                         stack.append((full_key, value))
                         if make_namespaces:
@@ -2180,10 +2238,10 @@ class ConfigDict(dict):
         """ If the first parameter is a string, all keys are prefixed with this
             namespace. Apart from that it works just as the usual dict.update().
             Example: ``update('some.namespace', key='value')`` """
-        prefix = ''
+        prefix = ""
         if a:
             if isinstance(a[0], basestring):
-                prefix = a[0].strip('.') + '.'
+                prefix = a[0].strip(".") + "."
                 a = a[1:]
         for key, value in dict(*a, **ka).items():
             self[prefix + key] = value
@@ -2195,9 +2253,8 @@ class ConfigDict(dict):
 
     def __setitem__(self, key, value):
         if not isinstance(key, basestring):
-            raise TypeError('Key has type %r (not a string)' % type(key))
-        value = self.meta_get(key, 'filter', lambda x: x
-)(value)
+            raise TypeError("Key has type %r (not a string)" % type(key))
+        value = self.meta_get(key, "filter", lambda x: x)(value)
         if key in self:
             if self[key] is value:
                 return
@@ -2227,44 +2284,44 @@ class ConfigDict(dict):
         return self._meta.get(key, {}).keys()
 
     def __getattr__(self, key):
-        depr('Attribute access is deprecated.')
+        depr("Attribute access is deprecated.")
         if key not in self:
             if key[0].isupper():
                 self[key] = self.Namespace(self, key)
         if key not in self:
-            if key.startswith('__'):
+            if key.startswith("__"):
                 raise AttributeError(key)
         return self.get(key)
 
     def __setattr__(self, key, value):
         if key in self.__slots__:
             return dict.__setattr__(self, key, value)
-        depr('Attribute assignment is deprecated.')
+        depr("Attribute assignment is deprecated.")
         if hasattr(dict, key):
-            raise AttributeError('Read-only attribute.')
+            raise AttributeError("Read-only attribute.")
         if key in self:
             if self[key]:
                 if isinstance(self[key], self.Namespace):
-                    raise AttributeError('Non-empty namespace attribute.')
+                    raise AttributeError("Non-empty namespace attribute.")
         self[key] = value
 
     def __delattr__(self, key):
         if key in self:
             val = self.pop(key)
             if isinstance(val, self.Namespace):
-                prefix = key + '.'
+                prefix = key + "."
                 for key in self:
                     if key.startswith(prefix):
                         del self[prefix + key]
 
     def __call__(self, *a, **ka):
-        depr('Calling ConfDict is deprecated. Use the update() method.')
+        depr("Calling ConfDict is deprecated. Use the update() method.")
         (self.update)(*a, **ka)
         return self
 
 
 class AppStack(list):
-    __doc__ = ' A stack-like list. Calling it returns the head of the stack. '
+    __doc__ = " A stack-like list. Calling it returns the head of the stack. "
 
     def __call__(self):
         """ Return the current default application. """
@@ -2279,10 +2336,9 @@ class AppStack(list):
 
 
 class WSGIFileWrapper(object):
-
     def __init__(self, fp, buffer_size=65536):
         self.fp, self.buffer_size = fp, buffer_size
-        for attr in ('fileno', 'close', 'read', 'readlines', 'tell', 'seek'):
+        for attr in ("fileno", "close", "read", "readlines", "tell", "seek"):
             if hasattr(fp, attr):
                 setattr(self, attr, getattr(fp, attr))
 
@@ -2297,7 +2353,7 @@ class WSGIFileWrapper(object):
 
 
 class _closeiter(object):
-    __doc__ = ' This only exists to be able to attach a .close method to iterators that\n        do not support attribute assignment (most of itertools). '
+    __doc__ = " This only exists to be able to attach a .close method to iterators that\n        do not support attribute assignment (most of itertools). "
 
     def __init__(self, iterator, close=None):
         self.iterator = iterator
@@ -2314,7 +2370,7 @@ class _closeiter(object):
 class ResourceManager(object):
     __doc__ = " This class manages a list of search paths and helps to find and open\n        application-bound resources (files).\n\n        :param base: default value for :meth:`add_path` calls.\n        :param opener: callable used to open resources.\n        :param cachemode: controls which lookups are cached. One of 'all',\n                         'found' or 'none'.\n    "
 
-    def __init__(self, base='./', opener=open, cachemode='all'):
+    def __init__(self, base="./", opener=open, cachemode="all"):
         self.opener = open
         self.base = base
         self.cachemode = cachemode
@@ -2378,25 +2434,24 @@ class ResourceManager(object):
             for path in self.path:
                 fpath = os.path.join(path, name)
                 if os.path.isfile(fpath):
-                    if self.cachemode in ('all', 'found'):
+                    if self.cachemode in ("all", "found"):
                         self.cache[name] = fpath
                     else:
                         return fpath
 
-            if self.cachemode == 'all':
+            if self.cachemode == "all":
                 self.cache[name] = None
         return self.cache[name]
 
-    def open(self, name, mode='r', *args, **kwargs):
+    def open(self, name, mode="r", *args, **kwargs):
         """ Find a resource and return a file object, or raise IOError. """
         fname = self.lookup(name)
         if not fname:
-            raise IOError('Resource %r not found.' % name)
+            raise IOError("Resource %r not found." % name)
         return (self.opener)(fname, *args, mode=mode, **kwargs)
 
 
 class FileUpload(object):
-
     def __init__(self, fileobj, name, filename, headers=None):
         """ Wrapper for file uploads. """
         self.file = fileobj
@@ -2404,8 +2459,8 @@ class FileUpload(object):
         self.raw_filename = filename
         self.headers = HeaderDict(headers) if headers else HeaderDict()
 
-    content_type = HeaderProperty('Content-Type')
-    content_length = HeaderProperty('Content-Length', reader=int, default=(-1))
+    content_type = HeaderProperty("Content-Type")
+    content_length = HeaderProperty("Content-Length", reader=int, default=(-1))
 
     def get_header(self, name, default=None):
         """ Return the value of a header within the mulripart part. """
@@ -2423,12 +2478,12 @@ class FileUpload(object):
         """
         fname = self.raw_filename
         if not isinstance(fname, unicode):
-            fname = fname.decode('utf8', 'ignore')
-        fname = normalize('NFKD', fname).encode('ASCII', 'ignore').decode('ASCII')
-        fname = os.path.basename(fname.replace('\\', os.path.sep))
-        fname = re.sub('[^a-zA-Z0-9-_.\\s]', '', fname).strip()
-        fname = re.sub('[-\\s]+', '-', fname).strip('.-')
-        return fname[:255] or 'empty'
+            fname = fname.decode("utf8", "ignore")
+        fname = normalize("NFKD", fname).encode("ASCII", "ignore").decode("ASCII")
+        fname = os.path.basename(fname.replace("\\", os.path.sep))
+        fname = re.sub("[^a-zA-Z0-9-_.\\s]", "", fname).strip()
+        fname = re.sub("[-\\s]+", "-", fname).strip(".-")
+        return fname[:255] or "empty"
 
     def _copy_file(self, fp, chunk_size=65536):
         read, write, offset = self.file.read, fp.write, self.file.tell()
@@ -2455,14 +2510,14 @@ class FileUpload(object):
                 destination = os.path.join(destination, self.filename)
             if not overwrite:
                 if os.path.exists(destination):
-                    raise IOError('File exists.')
-            with open(destination, 'wb') as fp:
+                    raise IOError("File exists.")
+            with open(destination, "wb") as fp:
                 self._copy_file(fp, chunk_size)
         else:
             self._copy_file(destination, chunk_size)
 
 
-def abort(code=500, text='Unknown Error.'):
+def abort(code=500, text="Unknown Error."):
     """ Aborts execution and causes a HTTP error. """
     raise HTTPError(code, text)
 
@@ -2471,11 +2526,11 @@ def redirect(url, code=None):
     """ Aborts execution and causes a 303 or 302 redirect, depending on
         the HTTP protocol version. """
     if not code:
-        code = 303 if request.get('SERVER_PROTOCOL') == 'HTTP/1.1' else 302
+        code = 303 if request.get("SERVER_PROTOCOL") == "HTTP/1.1" else 302
     res = response.copy(cls=HTTPResponse)
     res.status = code
-    res.body = ''
-    res.set_header('Location', urljoin(request.url, url))
+    res.body = ""
+    res.set_header("Location", urljoin(request.url, url))
     raise res
 
 
@@ -2491,7 +2546,7 @@ def _file_iter_range(fp, offset, bytes, maxread=1048576):
             yield part
 
 
-def static_file(filename, root, mimetype='auto', download=False, charset='UTF-8'):
+def static_file(filename, root, mimetype="auto", download=False, charset="UTF-8"):
     """ Open a file in a safe way and return :exc:`HTTPResponse` with status
         code 200, 305, 403 or 404. The ``Content-Type``, ``Content-Encoding``,
         ``Content-Length`` and ``Last-Modified`` headers are set if possible.
@@ -2511,48 +2566,48 @@ def static_file(filename, root, mimetype='auto', download=False, charset='UTF-8'
             mime-type. (default: UTF-8)
     """
     root = os.path.abspath(root) + os.sep
-    filename = os.path.abspath(os.path.join(root, filename.strip('/\\')))
+    filename = os.path.abspath(os.path.join(root, filename.strip("/\\")))
     headers = dict()
     if not filename.startswith(root):
-        return HTTPError(403, 'Access denied.')
+        return HTTPError(403, "Access denied.")
     if not (os.path.exists(filename) and os.path.isfile(filename)):
-        return HTTPError(404, 'File does not exist.')
+        return HTTPError(404, "File does not exist.")
     if not os.access(filename, os.R_OK):
-        return HTTPError(403, 'You do not have permission to access this file.')
-    if mimetype == 'auto':
+        return HTTPError(403, "You do not have permission to access this file.")
+    if mimetype == "auto":
         mimetype, encoding = mimetypes.guess_type(filename)
         if encoding:
-            headers['Content-Encoding'] = encoding
+            headers["Content-Encoding"] = encoding
     if mimetype:
-        if mimetype[:5] == 'text/':
+        if mimetype[:5] == "text/":
             if charset:
-                if 'charset' not in mimetype:
-                    mimetype += '; charset=%s' % charset
-        headers['Content-Type'] = mimetype
+                if "charset" not in mimetype:
+                    mimetype += "; charset=%s" % charset
+        headers["Content-Type"] = mimetype
     if download:
         download = os.path.basename(filename if download == True else download)
-        headers['Content-Disposition'] = 'attachment; filename="%s"' % download
+        headers["Content-Disposition"] = 'attachment; filename="%s"' % download
     stats = os.stat(filename)
-    headers['Content-Length'] = clen = stats.st_size
-    lm = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(stats.st_mtime))
-    headers['Last-Modified'] = lm
-    ims = request.environ.get('HTTP_IF_MODIFIED_SINCE')
+    headers["Content-Length"] = clen = stats.st_size
+    lm = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(stats.st_mtime))
+    headers["Last-Modified"] = lm
+    ims = request.environ.get("HTTP_IF_MODIFIED_SINCE")
     if ims:
-        ims = parse_date(ims.split(';')[0].strip())
+        ims = parse_date(ims.split(";")[0].strip())
     if ims is not None:
         if ims >= int(stats.st_mtime):
-            headers['Date'] = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime())
+            headers["Date"] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
             return HTTPResponse(status=304, **headers)
-    body = '' if request.method == 'HEAD' else open(filename, 'rb')
-    headers['Accept-Ranges'] = 'bytes'
-    ranges = request.environ.get('HTTP_RANGE')
-    if 'HTTP_RANGE' in request.environ:
-        ranges = list(parse_range_header(request.environ['HTTP_RANGE'], clen))
+    body = "" if request.method == "HEAD" else open(filename, "rb")
+    headers["Accept-Ranges"] = "bytes"
+    ranges = request.environ.get("HTTP_RANGE")
+    if "HTTP_RANGE" in request.environ:
+        ranges = list(parse_range_header(request.environ["HTTP_RANGE"], clen))
         if not ranges:
-            return HTTPError(416, 'Requested Range Not Satisfiable')
+            return HTTPError(416, "Requested Range Not Satisfiable")
         offset, end = ranges[0]
-        headers['Content-Range'] = 'bytes %d-%d/%d' % (offset, end - 1, clen)
-        headers['Content-Length'] = str(end - offset)
+        headers["Content-Range"] = "bytes %d-%d/%d" % (offset, end - 1, clen)
+        headers["Content-Length"] = str(end - offset)
         if body:
             body = _file_iter_range(body, offset, end - offset)
         return HTTPResponse(body, status=206, **headers)
@@ -2564,7 +2619,7 @@ def debug(mode=True):
     There is only one debug level supported at the moment."""
     global DEBUG
     if mode:
-        warnings.simplefilter('default')
+        warnings.simplefilter("default")
     DEBUG = bool(mode)
 
 
@@ -2575,7 +2630,7 @@ def http_date(value):
         if isinstance(value, (int, float)):
             value = time.gmtime(value)
     if not isinstance(value, basestring):
-        value = time.strftime('%a, %d %b %Y %H:%M:%S GMT', value)
+        value = time.strftime("%a, %d %b %Y %H:%M:%S GMT", value)
     return value
 
 
@@ -2583,7 +2638,7 @@ def parse_date(ims):
     """ Parse rfc1123, rfc850 and asctime timestamps and return UTC epoch. """
     try:
         ts = email.utils.parsedate_tz(ims)
-        return time.mktime(ts[:8] + (0, )) - (ts[9] or 0) - time.timezone
+        return time.mktime(ts[:8] + (0,)) - (ts[9] or 0) - time.timezone
     except (TypeError, ValueError, IndexError, OverflowError):
         return
 
@@ -2592,10 +2647,9 @@ def parse_auth(header):
     """ Parse rfc2617 HTTP authentication header string (basic) and return (user,pass) tuple or None"""
     try:
         method, data = header.split(None, 1)
-        if method.lower() == 'basic':
-            user, pwd = touni(base64.b64decode(tob(data))).split(':', 1)
-            return (
-             user, pwd)
+        if method.lower() == "basic":
+            user, pwd = touni(base64.b64decode(tob(data))).split(":", 1)
+            return (user, pwd)
     except (KeyError, ValueError):
         return
 
@@ -2603,9 +2657,9 @@ def parse_auth(header):
 def parse_range_header(header, maxlen=0):
     """ Yield (start, end) ranges parsed from a HTTP Range header. Skip
         unsatisfiable ranges. The end index is non-inclusive."""
-    if not header or header[:6] != 'bytes=':
+    if not header or header[:6] != "bytes=":
         return
-    ranges = [r.split('-', 1) for r in header[6:].split(',') if '-' in r]
+    ranges = [r.split("-", 1) for r in header[6:].split(",") if "-" in r]
     for start, end in ranges:
         try:
             if not start:
@@ -2615,24 +2669,23 @@ def parse_range_header(header, maxlen=0):
                     start, end = int(start), maxlen
                 else:
                     start, end = int(start), min(int(end) + 1, maxlen)
-            if 0<= start< end <= maxlen:
-                yield (
-                 start, end)
+            if 0 <= start < end <= maxlen:
+                yield (start, end)
         except ValueError:
             pass
 
 
 def _parse_qsl(qs):
     r = []
-    for pair in qs.split('&'):
+    for pair in qs.split("&"):
         if not pair:
             continue
         else:
-            nv = pair.split('=', 1)
+            nv = pair.split("=", 1)
             if len(nv) != 2:
-                nv.append('')
-            key = urlunquote(nv[0].replace('+', ' '))
-            value = urlunquote(nv[1].replace('+', ' '))
+                nv.append("")
+            key = urlunquote(nv[0].replace("+", " "))
+            value = urlunquote(nv[1].replace("+", " "))
             r.append((key, value))
 
     return r
@@ -2648,31 +2701,44 @@ def cookie_encode(data, key):
     """ Encode and sign a pickle-able object. Return a (byte) string """
     msg = base64.b64encode(pickle.dumps(data, -1))
     sig = base64.b64encode(hmac.new((tob(key)), msg, digestmod=(hashlib.md5)).digest())
-    return tob('!') + sig + tob('?') + msg
+    return tob("!") + sig + tob("?") + msg
 
 
 def cookie_decode(data, key):
     """ Verify and decode an encoded string. Return an object or None."""
     data = tob(data)
     if cookie_is_encoded(data):
-        sig, msg = data.split(tob('?'), 1)
-        if _lscmp(sig[1:], base64.b64encode(hmac.new((tob(key)), msg, digestmod=(hashlib.md5)).digest())):
+        sig, msg = data.split(tob("?"), 1)
+        if _lscmp(
+            sig[1:],
+            base64.b64encode(
+                hmac.new((tob(key)), msg, digestmod=(hashlib.md5)).digest()
+            ),
+        ):
             return pickle.loads(base64.b64decode(msg))
 
 
 def cookie_is_encoded(data):
     """ Return True if the argument looks like a encoded cookie."""
-    return bool(data.startswith(tob('!')) and tob('?') in data)
+    return bool(data.startswith(tob("!")) and tob("?") in data)
 
 
 def html_escape(string):
     """ Escape HTML special characters ``&<>`` and quotes ``'"``. """
-    return string.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#039;')
+    return (
+        string.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#039;")
+    )
 
 
 def html_quote(string):
     """ Escape and quote a string to be used as an HTTP attribute."""
-    return '"%s"' % html_escape(string).replace('\n', '&#10;').replace('\r', '&#13;').replace('\t', '&#9;')
+    return '"%s"' % html_escape(string).replace("\n", "&#10;").replace(
+        "\r", "&#13;"
+    ).replace("\t", "&#9;")
 
 
 def yieldroutes(func):
@@ -2685,13 +2751,13 @@ def yieldroutes(func):
         c(x, y=5)   -> '/c/<x>' and '/c/<x>/<y>'
         d(x=5, y=6) -> '/d' and '/d/<x>' and '/d/<x>/<y>'
     """
-    path = '/' + func.__name__.replace('__', '/').lstrip('/')
+    path = "/" + func.__name__.replace("__", "/").lstrip("/")
     spec = getargspec(func)
     argc = len(spec[0]) - len(spec[3] or [])
-    path += '/<%s>' * argc % tuple(spec[0][:argc])
+    path += "/<%s>" * argc % tuple(spec[0][:argc])
     yield path
     for arg in spec[0][argc:]:
-        path += '/<%s>' % arg
+        path += "/<%s>" % arg
         yield path
 
 
@@ -2705,15 +2771,14 @@ def path_shift(script_name, path_info, shift=1):
           change the shift direction. (default: 1)
     """
     if shift == 0:
-        return (
-         script_name, path_info)
-    pathlist = path_info.strip('/').split('/')
-    scriptlist = script_name.strip('/').split('/')
+        return (script_name, path_info)
+    pathlist = path_info.strip("/").split("/")
+    scriptlist = script_name.strip("/").split("/")
     if pathlist:
-        if pathlist[0] == '':
+        if pathlist[0] == "":
             pathlist = []
     if scriptlist:
-        if scriptlist[0] == '':
+        if scriptlist[0] == "":
             scriptlist = []
     if shift > 0 and shift <= len(pathlist):
         moved = pathlist[:shift]
@@ -2725,28 +2790,26 @@ def path_shift(script_name, path_info, shift=1):
             pathlist = moved + pathlist
             scriptlist = scriptlist[:shift]
         else:
-            empty = 'SCRIPT_NAME' if shift < 0 else 'PATH_INFO'
-            raise AssertionError('Cannot shift. Nothing left from %s' % empty)
-    new_script_name = '/' + '/'.join(scriptlist)
-    new_path_info = '/' + '/'.join(pathlist)
-    if path_info.endswith('/'):
+            empty = "SCRIPT_NAME" if shift < 0 else "PATH_INFO"
+            raise AssertionError("Cannot shift. Nothing left from %s" % empty)
+    new_script_name = "/" + "/".join(scriptlist)
+    new_path_info = "/" + "/".join(pathlist)
+    if path_info.endswith("/"):
         if pathlist:
-            new_path_info += '/'
-    return (
-     new_script_name, new_path_info)
+            new_path_info += "/"
+    return (new_script_name, new_path_info)
 
 
-def auth_basic(check, realm='private', text='Access denied'):
+def auth_basic(check, realm="private", text="Access denied"):
     """ Callback decorator to require HTTP auth (basic).
         TODO: Add route(check_auth=...) parameter. """
 
     def decorator(func):
-
         def wrapper(*a, **ka):
             user, password = request.auth or (None, None)
             if not (user is None or check(user, password)):
                 err = HTTPError(401, text)
-                err.add_header('WWW-Authenticate', 'Basic realm="%s"' % realm)
+                err.add_header("WWW-Authenticate", 'Basic realm="%s"' % realm)
                 return err
             return func(*a, **ka)
 
@@ -2765,22 +2828,23 @@ def make_default_app_wrapper(name):
     return wrapper
 
 
-route = make_default_app_wrapper('route')
-get = make_default_app_wrapper('get')
-post = make_default_app_wrapper('post')
-put = make_default_app_wrapper('put')
-delete = make_default_app_wrapper('delete')
-error = make_default_app_wrapper('error')
-mount = make_default_app_wrapper('mount')
-hook = make_default_app_wrapper('hook')
-install = make_default_app_wrapper('install')
-uninstall = make_default_app_wrapper('uninstall')
-url = make_default_app_wrapper('get_url')
+route = make_default_app_wrapper("route")
+get = make_default_app_wrapper("get")
+post = make_default_app_wrapper("post")
+put = make_default_app_wrapper("put")
+delete = make_default_app_wrapper("delete")
+error = make_default_app_wrapper("error")
+mount = make_default_app_wrapper("mount")
+hook = make_default_app_wrapper("hook")
+install = make_default_app_wrapper("install")
+uninstall = make_default_app_wrapper("uninstall")
+url = make_default_app_wrapper("get_url")
+
 
 class ServerAdapter(object):
     quiet = False
 
-    def __init__(self, host='127.0.0.1', port=8080, **options):
+    def __init__(self, host="127.0.0.1", port=8080, **options):
         self.options = options
         self.host = host
         self.port = int(port)
@@ -2789,8 +2853,8 @@ class ServerAdapter(object):
         pass
 
     def __repr__(self):
-        args = ', '.join(['%s=%s' % (k, repr(v)) for k, v in self.options.items()])
-        return '%s(%s)' % (self.__class__.__name__, args)
+        args = ", ".join(["%s=%s" % (k, repr(v)) for k, v in self.options.items()])
+        return "%s(%s)" % (self.__class__.__name__, args)
 
 
 class CGIServer(ServerAdapter):
@@ -2800,29 +2864,27 @@ class CGIServer(ServerAdapter):
         from wsgiref.handlers import CGIHandler
 
         def fixed_environ(environ, start_response):
-            environ.setdefault('PATH_INFO', '')
+            environ.setdefault("PATH_INFO", "")
             return handler(environ, start_response)
 
         CGIHandler().run(fixed_environ)
 
 
 class FlupFCGIServer(ServerAdapter):
-
     def run(self, handler):
         import flup.server.fcgi
-        self.options.setdefault('bindAddress', (self.host, self.port))
+
+        self.options.setdefault("bindAddress", (self.host, self.port))
         (flup.server.fcgi.WSGIServer)(handler, **self.options).run()
 
 
 class WSGIRefServer(ServerAdapter):
-
     def run(self, app):
         from wsgiref.simple_server import WSGIRequestHandler, WSGIServer
         from wsgiref.simple_server import make_server
         import socket
 
         class FixedHandler(WSGIRequestHandler):
-
             def address_string(self):
                 return self.client_address[0]
 
@@ -2830,10 +2892,10 @@ class WSGIRefServer(ServerAdapter):
                 if not self.quiet:
                     return (WSGIRequestHandler.log_request)(*args, **kw)
 
-        handler_cls = self.options.get('handler_class', FixedHandler)
-        server_cls = self.options.get('server_class', WSGIServer)
-        if ':' in self.host:
-            if getattr(server_cls, 'address_family') == socket.AF_INET:
+        handler_cls = self.options.get("handler_class", FixedHandler)
+        server_cls = self.options.get("server_class", WSGIServer)
+        if ":" in self.host:
+            if getattr(server_cls, "address_family") == socket.AF_INET:
 
                 class server_cls(server_cls):
                     address_family = socket.AF_INET6
@@ -2843,18 +2905,17 @@ class WSGIRefServer(ServerAdapter):
 
 
 class CherryPyServer(ServerAdapter):
-
     def run(self, handler):
         from cherrypy import wsgiserver
-        self.options['bind_addr'] = (
-         self.host, self.port)
-        self.options['wsgi_app'] = handler
-        certfile = self.options.get('certfile')
+
+        self.options["bind_addr"] = (self.host, self.port)
+        self.options["wsgi_app"] = handler
+        certfile = self.options.get("certfile")
         if certfile:
-            del self.options['certfile']
-        keyfile = self.options.get('keyfile')
+            del self.options["certfile"]
+        keyfile = self.options.get("keyfile")
         if keyfile:
-            del self.options['keyfile']
+            del self.options["keyfile"]
         server = (wsgiserver.CherryPyWSGIServer)(**self.options)
         if certfile:
             server.ssl_certificate = certfile
@@ -2867,58 +2928,60 @@ class CherryPyServer(ServerAdapter):
 
 
 class WaitressServer(ServerAdapter):
-
     def run(self, handler):
         from waitress import serve
+
         serve(handler, host=(self.host), port=(self.port))
 
 
 class PasteServer(ServerAdapter):
-
     def run(self, handler):
         from paste import httpserver
         from paste.translogger import TransLogger
+
         handler = TransLogger(handler, setup_console_handler=(not self.quiet))
         (httpserver.serve)(handler, host=self.host, port=str(self.port), **self.options)
 
 
 class MeinheldServer(ServerAdapter):
-
     def run(self, handler):
         from meinheld import server
+
         server.listen((self.host, self.port))
         server.run(handler)
 
 
 class FapwsServer(ServerAdapter):
-    __doc__ = ' Extremely fast webserver using libev. See http://www.fapws.org/ '
+    __doc__ = " Extremely fast webserver using libev. See http://www.fapws.org/ "
 
     def run(self, handler):
         import fapws._evwsgi as evwsgi
         from fapws import base, config
+
         port = self.port
         if float(config.SERVER_IDENT[-2:]) > 0.4:
             port = str(port)
         evwsgi.start(self.host, port)
-        if 'BOTTLE_CHILD' in os.environ:
+        if "BOTTLE_CHILD" in os.environ:
             if not self.quiet:
-                _stderr('WARNING: Auto-reloading does not work with Fapws3.\n')
-                _stderr('         (Fapws3 breaks python thread support)\n')
+                _stderr("WARNING: Auto-reloading does not work with Fapws3.\n")
+                _stderr("         (Fapws3 breaks python thread support)\n")
         evwsgi.set_base_module(base)
 
         def app(environ, start_response):
-            environ['wsgi.multiprocess'] = False
+            environ["wsgi.multiprocess"] = False
             return handler(environ, start_response)
 
-        evwsgi.wsgi_cb(('', app))
+        evwsgi.wsgi_cb(("", app))
         evwsgi.run()
 
 
 class TornadoServer(ServerAdapter):
-    __doc__ = ' The super hyped asynchronous server by facebook. Untested. '
+    __doc__ = " The super hyped asynchronous server by facebook. Untested. "
 
     def run(self, handler):
         import tornado.wsgi, tornado.httpserver, tornado.ioloop
+
         container = tornado.wsgi.WSGIContainer(handler)
         server = tornado.httpserver.HTTPServer(container)
         server.listen(port=(self.port), address=(self.host))
@@ -2926,38 +2989,41 @@ class TornadoServer(ServerAdapter):
 
 
 class AppEngineServer(ServerAdapter):
-    __doc__ = ' Adapter for Google App Engine. '
+    __doc__ = " Adapter for Google App Engine. "
     quiet = True
 
     def run(self, handler):
         from google.appengine.ext.webapp import util
-        module = sys.modules.get('__main__')
+
+        module = sys.modules.get("__main__")
         if module:
-            if not hasattr(module, 'main'):
+            if not hasattr(module, "main"):
                 module.main = lambda: util.run_wsgi_app(handler)
         util.run_wsgi_app(handler)
 
 
 class TwistedServer(ServerAdapter):
-    __doc__ = ' Untested. '
+    __doc__ = " Untested. "
 
     def run(self, handler):
         from twisted.web import server, wsgi
         from twisted.python.threadpool import ThreadPool
         from twisted.internet import reactor
+
         thread_pool = ThreadPool()
         thread_pool.start()
-        reactor.addSystemEventTrigger('after', 'shutdown', thread_pool.stop)
+        reactor.addSystemEventTrigger("after", "shutdown", thread_pool.stop)
         factory = server.Site(wsgi.WSGIResource(reactor, thread_pool, handler))
         reactor.listenTCP((self.port), factory, interface=(self.host))
         reactor.run()
 
 
 class DieselServer(ServerAdapter):
-    __doc__ = ' Untested. '
+    __doc__ = " Untested. "
 
     def run(self, handler):
         from diesel.protocols.wsgi import WSGIApplication
+
         app = WSGIApplication(handler, port=(self.port))
         app.run()
 
@@ -2967,42 +3033,41 @@ class GeventServer(ServerAdapter):
 
     def run(self, handler):
         from gevent import pywsgi, local
+
         if not isinstance(threading.local(), local.local):
-            msg = 'Bottle requires gevent.monkey.patch_all() (before import)'
+            msg = "Bottle requires gevent.monkey.patch_all() (before import)"
             raise RuntimeError(msg)
-        if self.options.pop('fast', None):
+        if self.options.pop("fast", None):
             depr('The "fast" option has been deprecated and removed by Gevent.')
         if self.quiet:
-            self.options['log'] = None
-        address = (
-         self.host, self.port)
+            self.options["log"] = None
+        address = (self.host, self.port)
         server = (pywsgi.WSGIServer)(address, handler, **self.options)
-        if 'BOTTLE_CHILD' in os.environ:
+        if "BOTTLE_CHILD" in os.environ:
             import signal
-            signal.signal(signal.SIGINT, lambda s, f: server.stop()
-)
+
+            signal.signal(signal.SIGINT, lambda s, f: server.stop())
         server.serve_forever()
 
 
 class GeventSocketIOServer(ServerAdapter):
-
     def run(self, handler):
         from socketio import server
-        address = (
-         self.host, self.port)
+
+        address = (self.host, self.port)
         (server.SocketIOServer)(address, handler, **self.options).serve_forever()
 
 
 class GunicornServer(ServerAdapter):
-    __doc__ = ' Untested. See http://gunicorn.org/configure.html for options. '
+    __doc__ = " Untested. See http://gunicorn.org/configure.html for options. "
 
     def run(self, handler):
         from gunicorn.app.base import Application
-        config = {'bind': '%s:%d' % (self.host, int(self.port))}
+
+        config = {"bind": "%s:%d" % (self.host, int(self.port))}
         config.update(self.options)
 
         class GunicornApplication(Application):
-
             def init(self, parser, opts, args):
                 return config
 
@@ -3013,36 +3078,47 @@ class GunicornServer(ServerAdapter):
 
 
 class EventletServer(ServerAdapter):
-    __doc__ = ' Untested '
+    __doc__ = " Untested "
 
     def run(self, handler):
         from eventlet import wsgi, listen
+
         try:
-            wsgi.server((listen((self.host, self.port))), handler, log_output=(not self.quiet))
+            wsgi.server(
+                (listen((self.host, self.port))), handler, log_output=(not self.quiet)
+            )
         except TypeError:
             wsgi.server(listen((self.host, self.port)), handler)
 
 
 class RocketServer(ServerAdapter):
-    __doc__ = ' Untested. '
+    __doc__ = " Untested. "
 
     def run(self, handler):
         from rocket import Rocket
-        server = Rocket((self.host, self.port), 'wsgi', {'wsgi_app': handler})
+
+        server = Rocket((self.host, self.port), "wsgi", {"wsgi_app": handler})
         server.start()
 
 
 class BjoernServer(ServerAdapter):
-    __doc__ = ' Fast server written in C: https://github.com/jonashaag/bjoern '
+    __doc__ = " Fast server written in C: https://github.com/jonashaag/bjoern "
 
     def run(self, handler):
         from bjoern import run
+
         run(handler, self.host, self.port)
 
 
 class AutoServer(ServerAdapter):
-    __doc__ = ' Untested. '
-    adapters = [WaitressServer,PasteServer,TwistedServer,CherryPyServer,WSGIRefServer]
+    __doc__ = " Untested. "
+    adapters = [
+        WaitressServer,
+        PasteServer,
+        TwistedServer,
+        CherryPyServer,
+        WSGIRefServer,
+    ]
 
     def run(self, handler):
         for sa in self.adapters:
@@ -3053,25 +3129,27 @@ class AutoServer(ServerAdapter):
 
 
 server_names = {
-  'cgi': CGIServer,
-  'flup': FlupFCGIServer,
-  'wsgiref': WSGIRefServer,
-  'waitress': WaitressServer,
-  'cherrypy': CherryPyServer,
-  'paste': PasteServer,
-  'fapws3': FapwsServer,
-  'tornado': TornadoServer,
-  'gae': AppEngineServer,
-  'twisted': TwistedServer,
-  'diesel': DieselServer,
-  'meinheld': MeinheldServer,
-  'gunicorn': GunicornServer,
-  'eventlet': EventletServer,
-  'gevent': GeventServer,
-  'geventSocketIO': GeventSocketIOServer,
-  'rocket': RocketServer,
-  'bjoern': BjoernServer,
-  'auto': AutoServer}
+    "cgi": CGIServer,
+    "flup": FlupFCGIServer,
+    "wsgiref": WSGIRefServer,
+    "waitress": WaitressServer,
+    "cherrypy": CherryPyServer,
+    "paste": PasteServer,
+    "fapws3": FapwsServer,
+    "tornado": TornadoServer,
+    "gae": AppEngineServer,
+    "twisted": TwistedServer,
+    "diesel": DieselServer,
+    "meinheld": MeinheldServer,
+    "gunicorn": GunicornServer,
+    "eventlet": EventletServer,
+    "gevent": GeventServer,
+    "geventSocketIO": GeventSocketIOServer,
+    "rocket": RocketServer,
+    "bjoern": BjoernServer,
+    "auto": AutoServer,
+}
+
 
 def load(target, **namespace):
     """ Import a module or fetch an object from a module.
@@ -3084,16 +3162,16 @@ def load(target, **namespace):
         expression. Keyword arguments passed to this function are available as
         local variables. Example: ``import_string('re:compile(x)', x='[a-z]')``
     """
-    module, target = target.split(':', 1) if ':' in target else (target, None)
+    module, target = target.split(":", 1) if ":" in target else (target, None)
     if module not in sys.modules:
         __import__(module)
     if not target:
         return sys.modules[module]
     if target.isalnum():
         return getattr(sys.modules[module], target)
-    package_name = module.split('.')[0]
+    package_name = module.split(".")[0]
     namespace[package_name] = sys.modules[package_name]
-    return eval('%s.%s' % (module, target), namespace)
+    return eval("%s.%s" % (module, target), namespace)
 
 
 def load_app(target):
@@ -3115,7 +3193,19 @@ def load_app(target):
 
 _debug = debug
 
-def run(app=None, server='wsgiref', host='127.0.0.1', port=8080, interval=1, reloader=False, quiet=False, plugins=None, debug=None, **kargs):
+
+def run(
+    app=None,
+    server="wsgiref",
+    host="127.0.0.1",
+    port=8080,
+    interval=1,
+    reloader=False,
+    quiet=False,
+    plugins=None,
+    debug=None,
+    **kargs
+):
     """ Start a server instance. This method blocks until the server terminates.
 
         :param app: WSGI application or target string supported by
@@ -3135,18 +3225,17 @@ def run(app=None, server='wsgiref', host='127.0.0.1', port=8080, interval=1, rel
     if NORUN:
         return
     if reloader:
-        if not os.environ.get('BOTTLE_CHILD'):
+        if not os.environ.get("BOTTLE_CHILD"):
             try:
                 try:
                     lockfile = None
-                    fd, lockfile = tempfile.mkstemp(prefix='bottle.', suffix='.lock')
+                    fd, lockfile = tempfile.mkstemp(prefix="bottle.", suffix=".lock")
                     os.close(fd)
                     while os.path.exists(lockfile):
-                        args = [
-                         sys.executable] + sys.argv
+                        args = [sys.executable] + sys.argv
                         environ = os.environ.copy()
-                        environ['BOTTLE_CHILD'] = 'true'
-                        environ['BOTTLE_LOCKFILE'] = lockfile
+                        environ["BOTTLE_CHILD"] = "true"
+                        environ["BOTTLE_LOCKFILE"] = lockfile
                         p = subprocess.Popen(args, env=environ)
                         while p.poll() is None:
                             os.utime(lockfile, None)
@@ -3173,7 +3262,7 @@ def run(app=None, server='wsgiref', host='127.0.0.1', port=8080, interval=1, rel
         if isinstance(app, basestring):
             app = load_app(app)
         if not callable(app):
-            raise ValueError('Application is not callable: %r' % app)
+            raise ValueError("Application is not callable: %r" % app)
         for plugin in plugins or []:
             app.install(plugin)
 
@@ -3184,18 +3273,21 @@ def run(app=None, server='wsgiref', host='127.0.0.1', port=8080, interval=1, rel
         if isinstance(server, type):
             server = server(host=host, port=port, **kargs)
         if not isinstance(server, ServerAdapter):
-            raise ValueError('Unknown or unsupported server: %r' % server)
+            raise ValueError("Unknown or unsupported server: %r" % server)
         server.quiet = server.quiet or quiet
         if not server.quiet:
-            _stderr('Bottle v%s server starting up (using %s)...\n' % (__version__, repr(server)))
-            _stderr('Listening on http://%s:%d/\n' % (server.host, server.port))
-            _stderr('Hit Ctrl-C to quit.\n\n')
+            _stderr(
+                "Bottle v%s server starting up (using %s)...\n"
+                % (__version__, repr(server))
+            )
+            _stderr("Listening on http://%s:%d/\n" % (server.host, server.port))
+            _stderr("Hit Ctrl-C to quit.\n\n")
         if reloader:
-            lockfile = os.environ.get('BOTTLE_LOCKFILE')
+            lockfile = os.environ.get("BOTTLE_LOCKFILE")
             bgcheck = FileCheckerThread(lockfile, interval)
             with bgcheck:
                 server.run(app)
-            if bgcheck.status == 'reload':
+            if bgcheck.status == "reload":
                 sys.exit(3)
         else:
             server.run(app)
@@ -3207,14 +3299,14 @@ def run(app=None, server='wsgiref', host='127.0.0.1', port=8080, interval=1, rel
         if not reloader:
             raise
         else:
-            if not getattr(server, 'quiet', quiet):
+            if not getattr(server, "quiet", quiet):
                 print_exc()
             time.sleep(interval)
             sys.exit(3)
 
 
 class FileCheckerThread(threading.Thread):
-    __doc__ = ' Interrupt main-thread as soon as a changed module file is detected,\n        the lockfile gets deleted or gets to old. '
+    __doc__ = " Interrupt main-thread as soon as a changed module file is detected,\n        the lockfile gets deleted or gets to old. "
 
     def __init__(self, lockfile, interval):
         threading.Thread.__init__(self)
@@ -3226,23 +3318,26 @@ class FileCheckerThread(threading.Thread):
         mtime = lambda path: os.stat(path).st_mtime
         files = dict()
         for module in list(sys.modules.values()):
-            path = getattr(module, '__file__', '') or ''
-            if path[-4:] in ('.pyo', '.pyc'):
+            path = getattr(module, "__file__", "") or ""
+            if path[-4:] in (".pyo", ".pyc"):
                 path = path[:-1]
             if path:
                 if exists(path):
                     files[path] = mtime(path)
 
         while not self.status:
-            if not exists(self.lockfile) or mtime(self.lockfile) < time.time() - self.interval - 5:
-                self.status = 'error'
+            if (
+                not exists(self.lockfile)
+                or mtime(self.lockfile) < time.time() - self.interval - 5
+            ):
+                self.status = "error"
                 thread.interrupt_main()
             else:
                 for path, lmtime in list(files.items()):
                     if exists(path):
                         if mtime(path) > lmtime:
                             pass
-                        self.status = 'reload'
+                        self.status = "reload"
                         thread.interrupt_main()
                         break
 
@@ -3253,24 +3348,23 @@ class FileCheckerThread(threading.Thread):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.status:
-            self.status = 'exit'
+            self.status = "exit"
         self.join()
         return exc_type is not None and issubclass(exc_type, KeyboardInterrupt)
 
 
 class TemplateError(HTTPError):
-
     def __init__(self, message):
         HTTPError.__init__(self, 500, message)
 
 
 class BaseTemplate(object):
-    __doc__ = ' Base class and minimal API for template adapters '
-    extensions = ['tpl', 'html', 'thtml', 'stpl']
+    __doc__ = " Base class and minimal API for template adapters "
+    extensions = ["tpl", "html", "thtml", "stpl"]
     settings = {}
     defaults = {}
 
-    def __init__(self, source=None, name=None, lookup=[], encoding='utf8', **settings):
+    def __init__(self, source=None, name=None, lookup=[], encoding="utf8", **settings):
         """ Create a new template.
         If the source parameter (str or buffer) is missing, the name argument
         is used to guess a template filename. Subclasses can assume that
@@ -3282,8 +3376,8 @@ class BaseTemplate(object):
         The settings parameter contains a dict for engine-specific settings.
         """
         self.name = name
-        self.source = source.read() if hasattr(source, 'read') else source
-        self.filename = source.filename if hasattr(source, 'filename') else None
+        self.source = source.read() if hasattr(source, "read") else source
+        self.filename = source.filename if hasattr(source, "filename") else None
         self.lookup = [os.path.abspath(x) for x in lookup]
         self.encoding = encoding
         self.settings = self.settings.copy()
@@ -3291,8 +3385,8 @@ class BaseTemplate(object):
         if not self.source or self.name:
             self.filename = self.search(self.name, self.lookup)
             if not self.filename:
-                raise TemplateError('Template %s not found.' % repr(name))
-            assert self.source or self.filename, 'No template specified.'
+                raise TemplateError("Template %s not found." % repr(name))
+            assert self.source or self.filename, "No template specified."
         (self.prepare)(**self.settings)
 
     @classmethod
@@ -3300,11 +3394,11 @@ class BaseTemplate(object):
         """ Search name in all directories specified in lookup.
         First without, then with common extensions. Return first hit. """
         if not lookup:
-            depr('The template lookup path list should not be empty.')
-            lookup = ['.']
+            depr("The template lookup path list should not be empty.")
+            lookup = ["."]
         if os.path.isabs(name):
             if os.path.isfile(name):
-                depr('Absolute template path names are deprecated.')
+                depr("Absolute template path names are deprecated.")
                 return os.path.abspath(name)
         for spath in lookup:
             spath = os.path.abspath(spath) + os.sep
@@ -3315,8 +3409,8 @@ class BaseTemplate(object):
                 if os.path.isfile(fname):
                     return fname
                 for ext in cls.extensions:
-                    if os.path.isfile('%s.%s' % (fname, ext)):
-                        return '%s.%s' % (fname, ext)
+                    if os.path.isfile("%s.%s" % (fname, ext)):
+                        return "%s.%s" % (fname, ext)
 
     @classmethod
     def global_config(cls, key, *args):
@@ -3345,17 +3439,19 @@ class BaseTemplate(object):
 
 
 class MakoTemplate(BaseTemplate):
-
     def prepare(self, **options):
         from mako.template import Template
         from mako.lookup import TemplateLookup
-        options.update({'input_encoding': self.encoding})
-        options.setdefault('format_exceptions', bool(DEBUG))
+
+        options.update({"input_encoding": self.encoding})
+        options.setdefault("format_exceptions", bool(DEBUG))
         lookup = TemplateLookup(directories=self.lookup, **options)
         if self.source:
             self.tpl = Template(self.source, lookup=lookup, **options)
         else:
-            self.tpl = Template(uri=self.name, filename=self.filename, lookup=lookup, **options)
+            self.tpl = Template(
+                uri=self.name, filename=self.filename, lookup=lookup, **options
+            )
 
     def render(self, *args, **kwargs):
         for dictarg in args:
@@ -3367,12 +3463,12 @@ class MakoTemplate(BaseTemplate):
 
 
 class CheetahTemplate(BaseTemplate):
-
     def prepare(self, **options):
         import Cheetah.Template as Template
+
         self.context = threading.local()
         self.context.vars = {}
-        options['searchList'] = [self.context.vars]
+        options["searchList"] = [self.context.vars]
         if self.source:
             self.tpl = Template(source=self.source, **options)
         else:
@@ -3390,11 +3486,13 @@ class CheetahTemplate(BaseTemplate):
 
 
 class Jinja2Template(BaseTemplate):
-
     def prepare(self, filters=None, tests=None, globals={}, **kwargs):
         from jinja2 import Environment, FunctionLoader
-        if 'prefix' in kwargs:
-            raise RuntimeError('The keyword argument `prefix` has been removed. Use the full jinja2 environment name line_statement_prefix instead.')
+
+        if "prefix" in kwargs:
+            raise RuntimeError(
+                "The keyword argument `prefix` has been removed. Use the full jinja2 environment name line_statement_prefix instead."
+            )
         self.env = Environment(loader=FunctionLoader(self.loader), **kwargs)
         if filters:
             self.env.filters.update(filters)
@@ -3419,12 +3517,11 @@ class Jinja2Template(BaseTemplate):
         fname = self.search(name, self.lookup)
         if not fname:
             return
-        with open(fname, 'rb') as f:
+        with open(fname, "rb") as f:
             return f.read().decode(self.encoding)
 
 
 class SimpleTemplate(BaseTemplate):
-
     def prepare(self, escape_func=html_escape, noescape=False, syntax=None, **ka):
         self.cache = {}
         enc = self.encoding
@@ -3436,19 +3533,19 @@ class SimpleTemplate(BaseTemplate):
 
     @cached_property
     def co(self):
-        return compile(self.code, self.filename or '<string>', 'exec')
+        return compile(self.code, self.filename or "<string>", "exec")
 
     @cached_property
     def code(self):
         source = self.source
         if not source:
-            with open(self.filename, 'rb') as f:
+            with open(self.filename, "rb") as f:
                 source = f.read()
         try:
-            source, encoding = touni(source), 'utf8'
+            source, encoding = touni(source), "utf8"
         except UnicodeError:
-            depr('Template encodings other than utf8 are no longer supported.')
-            source, encoding = touni(source, 'latin1'), 'latin1'
+            depr("Template encodings other than utf8 are no longer supported.")
+            source, encoding = touni(source, "latin1"), "latin1"
 
         parser = StplParser(source, encoding=encoding, syntax=(self.syntax))
         code = parser.translate()
@@ -3457,31 +3554,45 @@ class SimpleTemplate(BaseTemplate):
 
     def _rebase(self, _env, _name=None, **kwargs):
         if _name is None:
-            depr('Rebase function called without arguments. You were probably looking for {{base}}?', True)
-        _env['_rebase'] = (
-         _name, kwargs)
+            depr(
+                "Rebase function called without arguments. You were probably looking for {{base}}?",
+                True,
+            )
+        _env["_rebase"] = (_name, kwargs)
 
     def _include(self, _env, _name=None, **kwargs):
         if _name is None:
-            depr('Rebase function called without arguments. You were probably looking for {{base}}?', True)
+            depr(
+                "Rebase function called without arguments. You were probably looking for {{base}}?",
+                True,
+            )
         env = _env.copy()
         env.update(kwargs)
         if _name not in self.cache:
             self.cache[_name] = self.__class__(name=_name, lookup=(self.lookup))
-        return self.cache[_name].execute(env['_stdout'], env)
+        return self.cache[_name].execute(env["_stdout"], env)
 
     def execute(self, _stdout, kwargs):
         env = self.defaults.copy()
         env.update(kwargs)
-        env.update({'_stdout':_stdout,  '_printlist':_stdout.extend,  'include':functools.partial(self._include, env), 
-         'rebase':functools.partial(self._rebase, env), 
-         '_rebase':None,  '_str':self._str, 
-         '_escape':self._escape,  'get':env.get,  'setdefault':env.setdefault, 
-         'defined':env.__contains__})
+        env.update(
+            {
+                "_stdout": _stdout,
+                "_printlist": _stdout.extend,
+                "include": functools.partial(self._include, env),
+                "rebase": functools.partial(self._rebase, env),
+                "_rebase": None,
+                "_str": self._str,
+                "_escape": self._escape,
+                "get": env.get,
+                "setdefault": env.setdefault,
+                "defined": env.__contains__,
+            }
+        )
         eval(self.co, env)
-        if env.get('_rebase'):
-            subtpl, rargs = env.pop('_rebase')
-            rargs['base'] = ''.join(_stdout)
+        if env.get("_rebase"):
+            subtpl, rargs = env.pop("_rebase")
+            rargs["base"] = "".join(_stdout)
             del _stdout[:]
             return (self._include)(env, subtpl, **rargs)
         return env
@@ -3495,7 +3606,7 @@ class SimpleTemplate(BaseTemplate):
 
         env.update(kwargs)
         self.execute(stdout, env)
-        return ''.join(stdout)
+        return "".join(stdout)
 
 
 class StplSyntaxError(TemplateError):
@@ -3503,23 +3614,23 @@ class StplSyntaxError(TemplateError):
 
 
 class StplParser(object):
-    __doc__ = ' Parser for stpl templates. '
+    __doc__ = " Parser for stpl templates. "
     _re_cache = {}
-    _re_tok = '([urbURB]?(?:\'\'(?!\')|""(?!")|\'{6}|"{6}|\'(?:[^\\\\\']|\\\\.)+?\'|"(?:[^\\\\"]|\\\\.)+?"|\'{3}(?:[^\\\\]|\\\\.|\\n)+?\'{3}|"{3}(?:[^\\\\]|\\\\.|\\n)+?"{3}))'
-    _re_inl = _re_tok.replace('|\\n', '')
-    _re_tok += '|(#.*)'
-    _re_tok += '|([\\[\\{\\(])'
-    _re_tok += '|([\\]\\}\\)])'
-    _re_tok += '|^([ \\t]*(?:if|for|while|with|try|def|class)\\b)|^([ \\t]*(?:elif|else|except|finally)\\b)'
-    _re_tok += '|((?:^|;)[ \\t]*end[ \\t]*(?=(?:%(block_close)s[ \\t]*)?\\r?$|;|#))'
-    _re_tok += '|(%(block_close)s[ \\t]*(?=\\r?$))'
-    _re_tok += '|(\\r?\\n)'
-    _re_split = '(?m)^[ \t]*(\\\\?)((%(line_start)s)|(%(block_start)s))(%%?)'
-    _re_inl = '(?m)%%(inline_start)s((?:%s|[^\'"\n]*?)+)%%(inline_end)s' % _re_inl
-    _re_tok = '(?m)' + _re_tok
-    default_syntax = '<% %> % {{ }}'
+    _re_tok = "([urbURB]?(?:''(?!')|\"\"(?!\")|'{6}|\"{6}|'(?:[^\\\\']|\\\\.)+?'|\"(?:[^\\\\\"]|\\\\.)+?\"|'{3}(?:[^\\\\]|\\\\.|\\n)+?'{3}|\"{3}(?:[^\\\\]|\\\\.|\\n)+?\"{3}))"
+    _re_inl = _re_tok.replace("|\\n", "")
+    _re_tok += "|(#.*)"
+    _re_tok += "|([\\[\\{\\(])"
+    _re_tok += "|([\\]\\}\\)])"
+    _re_tok += "|^([ \\t]*(?:if|for|while|with|try|def|class)\\b)|^([ \\t]*(?:elif|else|except|finally)\\b)"
+    _re_tok += "|((?:^|;)[ \\t]*end[ \\t]*(?=(?:%(block_close)s[ \\t]*)?\\r?$|;|#))"
+    _re_tok += "|(%(block_close)s[ \\t]*(?=\\r?$))"
+    _re_tok += "|(\\r?\\n)"
+    _re_split = "(?m)^[ \t]*(\\\\?)((%(line_start)s)|(%(block_start)s))(%%?)"
+    _re_inl = "(?m)%%(inline_start)s((?:%s|[^'\"\n]*?)+)%%(inline_end)s" % _re_inl
+    _re_tok = "(?m)" + _re_tok
+    default_syntax = "<% %> % {{ }}"
 
-    def __init__(self, source, syntax=None, encoding='utf8'):
+    def __init__(self, source, syntax=None, encoding="utf8"):
         self.source, self.encoding = touni(source, encoding), encoding
         self.set_syntax(syntax or self.default_syntax)
         self.code_buffer, self.text_buffer = [], []
@@ -3535,7 +3646,7 @@ class StplParser(object):
         self._syntax = syntax
         self._tokens = syntax.split()
         if syntax not in self._re_cache:
-            names = 'block_start block_close line_start inline_start inline_end'
+            names = "block_start block_close line_start inline_start inline_end"
             etokens = map(re.escape, self._tokens)
             pattern_vars = dict(zip(names.split(), etokens))
             patterns = (self._re_split, self._re_tok, self._re_inl)
@@ -3547,22 +3658,22 @@ class StplParser(object):
 
     def translate(self):
         if self.offset:
-            raise RuntimeError('Parser is a one time instance.')
+            raise RuntimeError("Parser is a one time instance.")
         while True:
-            m = self.re_split.search(self.source[self.offset:])
+            m = self.re_split.search(self.source[self.offset :])
             if m:
-                text = self.source[self.offset:self.offset + m.start()]
+                text = self.source[self.offset : self.offset + m.start()]
                 self.text_buffer.append(text)
                 self.offset += m.end()
                 if m.group(1):
-                    line, sep, _ = self.source[self.offset:].partition('\n')
+                    line, sep, _ = self.source[self.offset :].partition("\n")
                     self.text_buffer.append(m.group(2) + m.group(5) + line + sep)
                     self.offset += len(line + sep) + 1
                     continue
                 else:
                     if m.group(5):
-                        depr('Escape code lines with a backslash.')
-                        line, sep, _ = self.source[self.offset:].partition('\n')
+                        depr("Escape code lines with a backslash.")
+                        line, sep, _ = self.source[self.offset :].partition("\n")
                         self.text_buffer.append(m.group(2) + line + sep)
                         self.offset += len(line + sep) + 1
                         continue
@@ -3571,20 +3682,20 @@ class StplParser(object):
             else:
                 break
 
-        self.text_buffer.append(self.source[self.offset:])
+        self.text_buffer.append(self.source[self.offset :])
         self.flush_text()
-        return ''.join(self.code_buffer)
+        return "".join(self.code_buffer)
 
     def read_code(self, multiline):
-        code_line, comment = ('', '')
+        code_line, comment = ("", "")
         while 1:
-            m = self.re_tok.search(self.source[self.offset:])
+            m = self.re_tok.search(self.source[self.offset :])
             if not m:
-                code_line += self.source[self.offset:]
+                code_line += self.source[self.offset :]
                 self.offset = len(self.source)
                 self.write_code(code_line.strip(), comment)
                 return
-            code_line += self.source[self.offset:self.offset + m.start()]
+            code_line += self.source[self.offset : self.offset + m.start()]
             self.offset += m.end()
             _str, _com, _po, _pc, _blk1, _blk2, _end, _cend, _nl = m.groups()
             if code_line or self.paren_depth > 0:
@@ -3626,76 +3737,74 @@ class StplParser(object):
                                         else:
                                             self.write_code(code_line.strip(), comment)
                                             self.lineno += 1
-                                            code_line, comment, self.indent_mod = ('',
-                                                                                   '',
-                                                                                   0)
+                                            code_line, comment, self.indent_mod = (
+                                                "",
+                                                "",
+                                                0,
+                                            )
                                             if not multiline:
                                                 break
 
     def flush_text(self):
-        text = ''.join(self.text_buffer)
+        text = "".join(self.text_buffer)
         del self.text_buffer[:]
         if not text:
             return
-        parts, pos, nl = [], 0, '\\\n' + '  ' * self.indent
+        parts, pos, nl = [], 0, "\\\n" + "  " * self.indent
         for m in self.re_inl.finditer(text):
-            prefix, pos = text[pos:m.start()], m.end()
+            prefix, pos = text[pos : m.start()], m.end()
             if prefix:
                 parts.append(nl.join(map(repr, prefix.splitlines(True))))
             else:
-                if prefix.endswith('\n'):
+                if prefix.endswith("\n"):
                     parts[-1] += nl
                 parts.append(self.process_inline(m.group(1).strip()))
 
         if pos < len(text):
             prefix = text[pos:]
             lines = prefix.splitlines(True)
-            if lines[-1].endswith('\\\\\n'):
+            if lines[-1].endswith("\\\\\n"):
                 lines[-1] = lines[-1][:-3]
             else:
-                if lines[-1].endswith('\\\\\r\n'):
+                if lines[-1].endswith("\\\\\r\n"):
                     lines[-1] = lines[-1][:-4]
             parts.append(nl.join(map(repr, lines)))
-        code = '_printlist((%s,))' % ', '.join(parts)
-        self.lineno += code.count('\n') + 1
+        code = "_printlist((%s,))" % ", ".join(parts)
+        self.lineno += code.count("\n") + 1
         self.write_code(code)
 
     def process_inline(self, chunk):
-        if chunk[0] == '!':
-            return '_str(%s)' % chunk[1:]
-        return '_escape(%s)' % chunk
+        if chunk[0] == "!":
+            return "_str(%s)" % chunk[1:]
+        return "_escape(%s)" % chunk
 
-    def write_code(self, line, comment=''):
+    def write_code(self, line, comment=""):
         line, comment = self.fix_backward_compatibility(line, comment)
-        code = '  ' * (self.indent + self.indent_mod)
-        code += line.lstrip() + comment + '\n'
+        code = "  " * (self.indent + self.indent_mod)
+        code += line.lstrip() + comment + "\n"
         self.code_buffer.append(code)
 
     def fix_backward_compatibility(self, line, comment):
         parts = line.strip().split(None, 2)
         if parts:
-            if parts[0] in ('include', 'rebase'):
-                depr('The include and rebase keywords are functions now.')
+            if parts[0] in ("include", "rebase"):
+                depr("The include and rebase keywords are functions now.")
                 if len(parts) == 1:
-                    return (
-                     '_printlist([base])', comment)
+                    return ("_printlist([base])", comment)
                 if len(parts) == 2:
-                    return (
-                     '_=%s(%r)' % tuple(parts), comment)
-                return ('_=%s(%r, %s)' % tuple(parts), comment)
+                    return ("_=%s(%r)" % tuple(parts), comment)
+                return ("_=%s(%r, %s)" % tuple(parts), comment)
         if self.lineno <= 2:
             if not line.strip():
-                if 'coding' in comment:
-                    m = re.match('#.*coding[:=]\\s*([-\\w.]+)', comment)
+                if "coding" in comment:
+                    m = re.match("#.*coding[:=]\\s*([-\\w.]+)", comment)
                     if m:
-                        depr('PEP263 encoding strings in templates are deprecated.')
+                        depr("PEP263 encoding strings in templates are deprecated.")
                         enc = m.group(1)
                         self.source = self.source.encode(self.encoding).decode(enc)
                         self.encoding = enc
-                        return (
-                         line, comment.replace('coding', 'coding*'))
-            return (
-             line, comment)
+                        return (line, comment.replace("coding", "coding*"))
+            return (line, comment)
 
 
 def template(*args, **kwargs):
@@ -3706,22 +3815,22 @@ def template(*args, **kwargs):
     or directly (as keyword arguments).
     """
     tpl = args[0] if args else None
-    adapter = kwargs.pop('template_adapter', SimpleTemplate)
-    lookup = kwargs.pop('template_lookup', TEMPLATE_PATH)
+    adapter = kwargs.pop("template_adapter", SimpleTemplate)
+    lookup = kwargs.pop("template_lookup", TEMPLATE_PATH)
     tplid = (id(lookup), tpl)
     if tplid not in TEMPLATES or DEBUG:
-        settings = kwargs.pop('template_settings', {})
+        settings = kwargs.pop("template_settings", {})
         if isinstance(tpl, adapter):
             TEMPLATES[tplid] = tpl
             if settings:
                 (TEMPLATES[tplid].prepare)(**settings)
         else:
-            if '\n' in tpl or '{' in tpl or '%' in tpl or '$' in tpl:
+            if "\n" in tpl or "{" in tpl or "%" in tpl or "$" in tpl:
                 TEMPLATES[tplid] = adapter(source=tpl, lookup=lookup, **settings)
             else:
                 TEMPLATES[tplid] = adapter(name=tpl, lookup=lookup, **settings)
     if not TEMPLATES[tplid]:
-        abort(500, 'Template (%s) not found' % tpl)
+        abort(500, "Template (%s) not found" % tpl)
     for dictarg in args[1:]:
         kwargs.update(dictarg)
 
@@ -3731,6 +3840,7 @@ def template(*args, **kwargs):
 mako_template = functools.partial(template, template_adapter=MakoTemplate)
 cheetah_template = functools.partial(template, template_adapter=CheetahTemplate)
 jinja2_template = functools.partial(template, template_adapter=Jinja2Template)
+
 
 def view(tpl_name, **defaults):
     """ Decorator: renders a template for a handler.
@@ -3744,7 +3854,6 @@ def view(tpl_name, **defaults):
     """
 
     def decorator(func):
-
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
@@ -3764,42 +3873,52 @@ def view(tpl_name, **defaults):
 mako_view = functools.partial(view, template_adapter=MakoTemplate)
 cheetah_view = functools.partial(view, template_adapter=CheetahTemplate)
 jinja2_view = functools.partial(view, template_adapter=Jinja2Template)
-TEMPLATE_PATH = [
- './', './views/']
+TEMPLATE_PATH = ["./", "./views/"]
 TEMPLATES = {}
 DEBUG = False
 NORUN = False
 HTTP_CODES = httplib.responses
 HTTP_CODES[418] = "I'm a teapot"
-HTTP_CODES[422] = 'Unprocessable Entity'
-HTTP_CODES[428] = 'Precondition Required'
-HTTP_CODES[429] = 'Too Many Requests'
-HTTP_CODES[431] = 'Request Header Fields Too Large'
-HTTP_CODES[511] = 'Network Authentication Required'
-_HTTP_STATUS_LINES = dict(((k, '%d %s' % (k, v)) for k, v in HTTP_CODES.items()))
-ERROR_PAGE_TEMPLATE = '\n%%try:\n    %%from %s import DEBUG, HTTP_CODES, request, touni\n    <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">\n    <html>\n        <head>\n            <title>Error: {{e.status}}</title>\n            <style type="text/css">\n              html {background-color: #eee; font-family: sans;}\n              body {background-color: #fff; border: 1px solid #ddd;\n                    padding: 15px; margin: 15px;}\n              pre {background-color: #eee; border: 1px solid #ddd; padding: 5px;}\n            </style>\n        </head>\n        <body>\n            <h1>Error: {{e.status}}</h1>\n            <p>Sorry, the requested URL <tt>{{repr(request.url)}}</tt>\n               caused an error:</p>\n            <pre>{{e.body}}</pre>\n            %%if DEBUG and e.exception:\n              <h2>Exception:</h2>\n              <pre>{{repr(e.exception)}}</pre>\n            %%end\n            %%if DEBUG and e.traceback:\n              <h2>Traceback:</h2>\n              <pre>{{e.traceback}}</pre>\n            %%end\n        </body>\n    </html>\n%%except ImportError:\n    <b>ImportError:</b> Could not generate the error page. Please add bottle to\n    the import path.\n%%end\n' % __name__
+HTTP_CODES[422] = "Unprocessable Entity"
+HTTP_CODES[428] = "Precondition Required"
+HTTP_CODES[429] = "Too Many Requests"
+HTTP_CODES[431] = "Request Header Fields Too Large"
+HTTP_CODES[511] = "Network Authentication Required"
+_HTTP_STATUS_LINES = dict(((k, "%d %s" % (k, v)) for k, v in HTTP_CODES.items()))
+ERROR_PAGE_TEMPLATE = (
+    '\n%%try:\n    %%from %s import DEBUG, HTTP_CODES, request, touni\n    <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">\n    <html>\n        <head>\n            <title>Error: {{e.status}}</title>\n            <style type="text/css">\n              html {background-color: #eee; font-family: sans;}\n              body {background-color: #fff; border: 1px solid #ddd;\n                    padding: 15px; margin: 15px;}\n              pre {background-color: #eee; border: 1px solid #ddd; padding: 5px;}\n            </style>\n        </head>\n        <body>\n            <h1>Error: {{e.status}}</h1>\n            <p>Sorry, the requested URL <tt>{{repr(request.url)}}</tt>\n               caused an error:</p>\n            <pre>{{e.body}}</pre>\n            %%if DEBUG and e.exception:\n              <h2>Exception:</h2>\n              <pre>{{repr(e.exception)}}</pre>\n            %%end\n            %%if DEBUG and e.traceback:\n              <h2>Traceback:</h2>\n              <pre>{{e.traceback}}</pre>\n            %%end\n        </body>\n    </html>\n%%except ImportError:\n    <b>ImportError:</b> Could not generate the error page. Please add bottle to\n    the import path.\n%%end\n'
+    % __name__
+)
 request = LocalRequest()
 response = LocalResponse()
 local = threading.local()
 app = default_app = AppStack()
 app.push()
-ext = _ImportRedirect('bottle.ext' if __name__ == '__main__' else __name__ + '.ext', 'bottle_%s').module
-if __name__ == '__main__':
+ext = _ImportRedirect(
+    "bottle.ext" if __name__ == "__main__" else __name__ + ".ext", "bottle_%s"
+).module
+if __name__ == "__main__":
     opt, args, parser = _cmd_options, _cmd_args, _cmd_parser
     if opt.version:
-        _stdout('Bottle %s\n' % __version__)
+        _stdout("Bottle %s\n" % __version__)
         sys.exit(0)
     if not args:
         parser.print_help()
-        _stderr('\nError: No application specified.\n')
+        _stderr("\nError: No application specified.\n")
         sys.exit(1)
-    sys.path.insert(0, '.')
-    sys.modules.setdefault('bottle', sys.modules['__main__'])
-    host, port = opt.bind or 'localhost', 8080
-    if ':' in host:
-        if host.rfind(']') < host.rfind(':'):
-            host, port = host.rsplit(':', 1)
-    host = host.strip('[]')
-    run((args[0]), host=host, port=(int(port)), server=(opt.server), reloader=(opt.reload),
-      plugins=(opt.plugin),
-      debug=(opt.debug))
+    sys.path.insert(0, ".")
+    sys.modules.setdefault("bottle", sys.modules["__main__"])
+    host, port = opt.bind or "localhost", 8080
+    if ":" in host:
+        if host.rfind("]") < host.rfind(":"):
+            host, port = host.rsplit(":", 1)
+    host = host.strip("[]")
+    run(
+        (args[0]),
+        host=host,
+        port=(int(port)),
+        server=(opt.server),
+        reloader=(opt.reload),
+        plugins=(opt.plugin),
+        debug=(opt.debug),
+    )

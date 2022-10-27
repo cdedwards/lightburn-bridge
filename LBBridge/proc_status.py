@@ -12,6 +12,7 @@ from . import log
 from . import util
 import time
 
+
 class STATUS(Enum):
     none = 1
     ok = 2
@@ -24,7 +25,7 @@ class BaseStatus:
 
     def __init__(self, name):
         self.name = name
-        self.base_dir = Path('/mnt/lbproc')
+        self.base_dir = Path("/mnt/lbproc")
         self.status_file = self.base_dir / f"{self.name}.status"
         self.lock_file = self.base_dir / f"{self.name}.lock"
         self.service = None
@@ -45,14 +46,14 @@ class BaseStatus:
         if not self.service_running:
             return (STATUS.error, f"{self.name} service is not running")
         status = STATUS.none
-        res = ''
+        res = ""
         if self.is_json:
             res = {}
         lines = []
         with self.lock:
             if not self.status_file.exists():
                 return (status, res)
-            with open(self.status_file, 'r') as f:
+            with open(self.status_file, "r") as f:
                 lines = f.readlines()
                 if len(lines) != 2:
                     return (status, res)
@@ -71,14 +72,13 @@ class BaseStatus:
                 log.error(f"{self.name} status: error parsing status val f{res}")
                 res = {}
 
-            return (
-             status, res)
+            return (status, res)
 
     def SetStatus(self, status, msg):
         if self.is_json:
             msg = json.dumps(msg)
         with self.lock:
-            with open(self.status_file, 'w') as f:
+            with open(self.status_file, "w") as f:
                 f.write(f"{status.value}\n")
                 f.write(msg)
 
@@ -100,17 +100,16 @@ class BaseStatus:
 
 
 class WiFiStatus(BaseStatus):
-
     def __init__(self):
-        super().__init__('wifi')
-        self.service = 'lbnetwork'
-        self.name = 'Network'
+        super().__init__("wifi")
+        self.service = "lbnetwork"
+        self.name = "Network"
 
     def SetConnectedState(self, ip=None):
         if ip:
             self.ok(f"Connected -> {ip}")
         else:
-            self.error('Disconnected')
+            self.error("Disconnected")
 
     def SetAPMode(self, name):
         self.warn(f"WiFi Config AP running: {name}")
@@ -119,40 +118,35 @@ class WiFiStatus(BaseStatus):
         if ap_name:
             self.warn(f"Attempting to connect to {ap_name}")
         else:
-            self.warn('Attempting to connect...')
+            self.warn("Attempting to connect...")
 
 
 class RelayStatus(BaseStatus):
-
     def __init__(self):
-        super().__init__('relay')
-        self.service = 'lbrelay'
-        self.name = 'Relay'
+        super().__init__("relay")
+        self.service = "lbrelay"
+        self.name = "Relay"
 
 
 class RelayDetails(BaseStatus):
-
     def __init__(self):
-        super().__init__('relay_details')
-        self.service = 'lbrelay'
-        self.name = 'Relay'
+        super().__init__("relay_details")
+        self.service = "lbrelay"
+        self.name = "Relay"
 
 
 class PiStatus(BaseStatus):
-
     def __init__(self):
-        super().__init__('pi')
+        super().__init__("pi")
         self.is_json = True
-        self.service = 'lbpistatus'
-        self.name = 'Pi Status'
+        self.service = "lbpistatus"
+        self.name = "Pi Status"
 
     def GetStatus(self):
         status, msg = super().GetStatus()
         if isinstance(msg, str):
-            msg = [
-             msg]
+            msg = [msg]
         else:
             if msg == {}:
                 msg = []
-        return (
-         status, msg)
+        return (status, msg)

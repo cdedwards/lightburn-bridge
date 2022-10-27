@@ -5,5 +5,6 @@
 # Compiled at: 2021-09-13 10:26:38
 # Size of source mod 2**32: 68 bytes
 from LBBridge import dash
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     dash.run()

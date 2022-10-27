@@ -8,14 +8,13 @@ import json
 from pathlib import Path
 import uuid
 from . import log
-CONFIG_DEFAULTS = {'device_type':'ruida', 
- 'laser_ip':'10.0.3.3', 
- 'ap_name':None}
+
+CONFIG_DEFAULTS = {"device_type": "ruida", "laser_ip": "10.0.3.3", "ap_name": None}
+
 
 class Config:
-
     def __init__(self):
-        self._Config__path = Path('/boot/bridge.json')
+        self._Config__path = Path("/boot/bridge.json")
         self._Config__reset()
         self.Load()
 
@@ -30,7 +29,7 @@ class Config:
         if not self._Config__path.exists():
             log.warning(f"{self._Config__path} does not exist! Setting to defaults.")
         else:
-            with open(self._Config__path, 'r') as f:
+            with open(self._Config__path, "r") as f:
                 try:
                     data = json.load(f)
                 except:
@@ -51,7 +50,7 @@ class Config:
         for key in CONFIG_DEFAULTS.keys():
             data[key] = self.__dict__[key]
 
-        with open(self._Config__path, 'w') as f:
+        with open(self._Config__path, "w") as f:
             json.dump(data, f, indent=2)
 
     def to_dict(self):
