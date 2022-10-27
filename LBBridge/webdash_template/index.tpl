@@ -54,10 +54,10 @@
 
   <table>
     % for item in status:
-    <tr>
-      <td>{{!item[0]}}</td>
-      <td class='status'>{{!item[1]}}</td>
-    </tr>
+      <tr>
+        <td>{{!item[0]}}</td>
+        <td class='status'>{{!item[1]}}</td>
+      </tr>
     % end
   </table>
 
