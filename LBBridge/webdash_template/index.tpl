@@ -61,12 +61,12 @@
     % end
   </table>
 
-  <br />
-  <br />
+  <br/>
+  <br/>
   
   <h3>Service Logs</h3>
-  <p><a href="/service_log/lbnetwork">Network Log</a></p>
-  <p><a href="/service_log/lbrelay">Relay Log</a></p>
+
+
 </body>
 
 </html>
