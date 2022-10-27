@@ -134,7 +134,9 @@ class NM:
         try:
             ipaddress.ip_address(ip)
         except ValueError:
-            log.show_user(f"{ip} is not a valid IP address. Cannot configure ethernet")
+            log.show_user(
+                f"{ip} is not a valid IP address. Cannot configure ethernet"
+            )
             return False
         else:
             final_ip = ip

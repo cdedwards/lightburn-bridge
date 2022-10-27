@@ -56,7 +56,9 @@ class WebCam:
             return (False, None)
         try:
             frame = self.jpeg.scale_with_quality(
-                frame, scaling_factor=(self.thumb_scale), quality=(self.thumb_qual)
+                frame,
+                scaling_factor=(self.thumb_scale),
+                quality=(self.thumb_qual),
             )
         except IOError as ex:
             try:

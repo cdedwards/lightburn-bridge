@@ -39,8 +39,13 @@ class BaseStatus:
     def GetStatus(self):
         if BaseStatus.check_service_status:
             if self.service:
-                if time.time() - self.last_service_check >= self.service_check_interval:
-                    rc, _ = util.shell(f"systemctl is-active --quiet {self.service}")
+                if (
+                    time.time() - self.last_service_check
+                    >= self.service_check_interval
+                ):
+                    rc, _ = util.shell(
+                        f"systemctl is-active --quiet {self.service}"
+                    )
                     self.service_running = rc == 0
                     self.last_service_check = time.time()
         if not self.service_running:
@@ -62,17 +67,22 @@ class BaseStatus:
             status_int = int(status_str)
             status = STATUS(status_int)
         except ValueError:
-            log.error(f"{self.name} status: error parsing status val f{status_str}")
+            log.error(
+                f"{self.name} status: error parsing status val f{status_str}"
+            )
 
         res = lines[1].rstrip()
         if self.is_json:
             try:
                 res = json.loads(res)
             except:
-                log.error(f"{self.name} status: error parsing status val f{res}")
+                log.error(
+                    f"{self.name} status: error parsing status val f{res}"
+                )
                 res = {}
 
             return (status, res)
+        return (status, res)
 
     def SetStatus(self, status, msg):
         if self.is_json:

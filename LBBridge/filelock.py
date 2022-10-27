@@ -4,7 +4,9 @@
 # Embedded file name: /boot/LBBridge/LBBridge/filelock.py
 # Compiled at: 2021-08-26 10:07:04
 # Size of source mod 2**32: 12835 bytes
-__doc__ = "\nA platform independent file lock that supports the with-statement.\n"
+__doc__ = (
+    "\nA platform independent file lock that supports the with-statement.\n"
+)
 import logging, os, threading, time
 
 try:
@@ -55,7 +57,9 @@ class Timeout(TimeoutError):
         self.lock_file = lock_file
 
     def __str__(self):
-        temp = "The file lock '{}' could not be acquired.".format(self.lock_file)
+        temp = "The file lock '{}' could not be acquired.".format(
+            self.lock_file
+        )
         return temp
 
 
@@ -189,12 +193,16 @@ class BaseFileLock(object):
                         )
                         self._acquire()
                 if self.is_locked:
-                    logger().info("Lock %s acquired on %s", lock_id, lock_filename)
+                    logger().info(
+                        "Lock %s acquired on %s", lock_id, lock_filename
+                    )
                     break
                 else:
                     if timeout >= 0 and time.time() - start_time > timeout:
                         logger().debug(
-                            "Timeout on acquiring lock %s on %s", lock_id, lock_filename
+                            "Timeout on acquiring lock %s on %s",
+                            lock_id,
+                            lock_filename,
                         )
                         raise Timeout(self._lock_file)
                     else:
@@ -233,11 +241,15 @@ class BaseFileLock(object):
                     lock_id = id(self)
                     lock_filename = self._lock_file
                     logger().debug(
-                        "Attempting to release lock %s on %s", lock_id, lock_filename
+                        "Attempting to release lock %s on %s",
+                        lock_id,
+                        lock_filename,
                     )
                     self._release()
                     self._lock_counter = 0
-                    logger().info("Lock %s released on %s", lock_id, lock_filename)
+                    logger().info(
+                        "Lock %s released on %s", lock_id, lock_filename
+                    )
 
     def __enter__(self):
         self.acquire()

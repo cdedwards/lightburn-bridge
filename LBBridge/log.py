@@ -35,7 +35,9 @@ def init_logger(name):
     global setLevel
     global warning
     __logger = logging.getLogger(name)
-    formatter = logging.Formatter(fmt="%(asctime)s | %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)s - %(message)s"
+    )
     __logger.handlers = []
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)

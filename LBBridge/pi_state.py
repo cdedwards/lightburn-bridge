@@ -48,7 +48,9 @@ class PiState:
         return self._PiState__is_pi
 
     def __get_throttled(self):
-        throttled_output = subprocess.check_output((self.throttle_cmd), shell=True)
+        throttled_output = subprocess.check_output(
+            (self.throttle_cmd), shell=True
+        )
         throttled_output = throttled_output.strip()
         hex_val = throttled_output.split(b"=")[1]
         throttled_binary = int(hex_val, base=16)

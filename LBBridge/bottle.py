@@ -7,7 +7,9 @@ __license__ = "MIT"
 if __name__ == "__main__":
     from optparse import OptionParser
 
-    _cmd_parser = OptionParser(usage="usage: %prog [options] package.module:app")
+    _cmd_parser = OptionParser(
+        usage="usage: %prog [options] package.module:app"
+    )
     _opt = _cmd_parser.add_option
     _opt("--version", action="store_true", help="show version number.")
     _opt("-b", "--bind", metavar="ADDRESS", help="bind socket to ADDRESS.")
@@ -35,11 +37,16 @@ except ImportError:
         from json import dumps as json_dumps, loads as json_lds
     except ImportError:
         try:
-            from django.utils.simplejson import dumps as json_dumps, loads as json_lds
+            from django.utils.simplejson import (
+                dumps as json_dumps,
+                loads as json_lds,
+            )
         except ImportError:
 
             def json_dumps(data):
-                raise ImportError("JSON support requires Python 2.6 or simplejson.")
+                raise ImportError(
+                    "JSON support requires Python 2.6 or simplejson."
+                )
 
             json_lds = json_dumps
 
@@ -263,7 +270,11 @@ class Router(object):
         self.dyna_regexes = {}
         self.strict_order = strict
         self.filters = {
-            "re": lambda conf: (_re_flatten(conf or self.default_pattern), None, None),
+            "re": lambda conf: (
+                _re_flatten(conf or self.default_pattern),
+                None,
+                None,
+            ),
             "int": lambda conf: ("-?\\d+", int, lambda x: str(int(x))),
             "float": lambda conf: ("-?[\\d.]+", float, lambda x: str(float(x))),
             "path": lambda conf: (".+?", None, None),
@@ -340,7 +351,9 @@ class Router(object):
             re_pattern = re.compile("^(%s)$" % pattern)
             re_match = re_pattern.match
         except re.error:
-            raise RouteSyntaxError("Could not add Route: %s (%s)" % (rule, _e()))
+            raise RouteSyntaxError(
+                "Could not add Route: %s (%s)" % (rule, _e())
+            )
 
         if filters:
 
@@ -368,7 +381,9 @@ class Router(object):
             if DEBUG:
                 msg = "Route <%s %s> overwrites a previously defined route"
                 warnings.warn(msg % (method, rule), RuntimeWarning)
-            self.dyna_routes[method][self._groups[(flatpat, method)]] = whole_rule
+            self.dyna_routes[method][
+                self._groups[(flatpat, method)]
+            ] = whole_rule
         else:
             self.dyna_routes.setdefault(method, []).append(whole_rule)
             self._groups[(flatpat, method)] = len(self.dyna_routes[method]) - 1
@@ -589,7 +604,12 @@ class Bottle(object):
         self.install(TemplatePlugin())
 
     catchall = DictProperty("config", "catchall")
-    _Bottle__hook_names = ("before_request", "after_request", "app_reset", "config")
+    _Bottle__hook_names = (
+        "before_request",
+        "after_request",
+        "app_reset",
+        "config",
+    )
     _Bottle__hook_reversed = "after_request"
 
     @cached_property
@@ -706,7 +726,9 @@ class Bottle(object):
             plugin.setup(self)
         if not callable(plugin):
             if not hasattr(plugin, "apply"):
-                raise TypeError("Plugins must be callable or implement .apply()")
+                raise TypeError(
+                    "Plugins must be callable or implement .apply()"
+                )
             self.plugins.append(plugin)
             self.reset()
             return plugin
@@ -933,9 +955,9 @@ class Bottle(object):
             return [out]
         if isinstance(out, HTTPError):
             out.apply(response)
-            out = self.error_handler.get(out.status_code, self.default_error_handler)(
-                out
-            )
+            out = self.error_handler.get(
+                out.status_code, self.default_error_handler
+            )(out)
             return self._cast(out)
         if isinstance(out, HTTPResponse):
             out.apply(response)
@@ -961,7 +983,9 @@ class Bottle(object):
                 if not self.catchall:
                     raise
                 else:
-                    first = HTTPError(500, "Unhandled exception", _e(), format_exc())
+                    first = HTTPError(
+                        500, "Unhandled exception", _e(), format_exc()
+                    )
 
             if isinstance(first, HTTPResponse):
                 return self._cast(first)
@@ -996,8 +1020,9 @@ class Bottle(object):
         except Exception:
             if not self.catchall:
                 raise
-            err = "<h1>Critical error while processing request: %s</h1>" % html_escape(
-                environ.get("PATH_INFO", "/")
+            err = (
+                "<h1>Critical error while processing request: %s</h1>"
+                % html_escape(environ.get("PATH_INFO", "/"))
             )
             if DEBUG:
                 err += (
@@ -1238,7 +1263,9 @@ class BaseRequest(object):
     @property
     def chunked(self):
         """ True if Chunked transfer encoding was. """
-        return "chunked" in self.environ.get("HTTP_TRANSFER_ENCODING", "").lower()
+        return (
+            "chunked" in self.environ.get("HTTP_TRANSFER_ENCODING", "").lower()
+        )
 
     GET = query
 
@@ -1262,7 +1289,9 @@ class BaseRequest(object):
 
         args = dict(fp=(self.body), environ=safe_env, keep_blank_values=True)
         if py31:
-            args["fp"] = NCTextIOWrapper((args["fp"]), encoding="utf8", newline="\n")
+            args["fp"] = NCTextIOWrapper(
+                (args["fp"]), encoding="utf8", newline="\n"
+            )
         else:
             if py3k:
                 args["encoding"] = "utf8"
@@ -1294,7 +1323,9 @@ class BaseRequest(object):
             but the fragment is always empty because it is not visible to the
             server. """
         env = self.environ
-        http = env.get("HTTP_X_FORWARDED_PROTO") or env.get("wsgi.url_scheme", "http")
+        http = env.get("HTTP_X_FORWARDED_PROTO") or env.get(
+            "wsgi.url_scheme", "http"
+        )
         host = env.get("HTTP_X_FORWARDED_HOST") or env.get("HTTP_HOST")
         if not host:
             host = env.get("SERVER_NAME", "127.0.0.1")
@@ -1335,7 +1366,9 @@ class BaseRequest(object):
                          to change the shift direction. (default: 1)
         """
         script = self.environ.get("SCRIPT_NAME", "/")
-        self["SCRIPT_NAME"], self["PATH_INFO"] = path_shift(script, self.path, shift)
+        self["SCRIPT_NAME"], self["PATH_INFO"] = path_shift(
+            script, self.path, shift
+        )
 
     @property
     def content_length(self):
@@ -1775,7 +1808,9 @@ Response = BaseResponse
 
 class HTTPResponse(Response, BottleException):
     def __init__(self, body="", status=None, headers=None, **more_headers):
-        (super(HTTPResponse, self).__init__)(body, status, headers, **more_headers)
+        (super(HTTPResponse, self).__init__)(
+            body, status, headers, **more_headers
+        )
 
     def apply(self, response):
         response._status_code = self._status_code
@@ -1853,7 +1888,12 @@ class _ImportRedirect(object):
         self.impmask = impmask
         self.module = sys.modules.setdefault(name, new_module(name))
         self.module.__dict__.update(
-            {"__file__": __file__, "__path__": [], "__all__": [], "__loader__": self}
+            {
+                "__file__": __file__,
+                "__path__": [],
+                "__all__": [],
+                "__loader__": self,
+            }
         )
         sys.meta_path.append(self)
 
@@ -1986,7 +2026,9 @@ class FormsDict(MultiDict):
     def _fix(self, s, encoding=None):
         if isinstance(s, unicode):
             if self.recode_unicode:
-                return s.encode("latin1").decode(encoding or self.input_encoding)
+                return s.encode("latin1").decode(
+                    encoding or self.input_encoding
+                )
         if isinstance(s, bytes):
             return s.decode(encoding or self.input_encoding)
         return s
@@ -2479,7 +2521,9 @@ class FileUpload(object):
         fname = self.raw_filename
         if not isinstance(fname, unicode):
             fname = fname.decode("utf8", "ignore")
-        fname = normalize("NFKD", fname).encode("ASCII", "ignore").decode("ASCII")
+        fname = (
+            normalize("NFKD", fname).encode("ASCII", "ignore").decode("ASCII")
+        )
         fname = os.path.basename(fname.replace("\\", os.path.sep))
         fname = re.sub("[^a-zA-Z0-9-_.\\s]", "", fname).strip()
         fname = re.sub("[-\\s]+", "-", fname).strip(".-")
@@ -2546,7 +2590,9 @@ def _file_iter_range(fp, offset, bytes, maxread=1048576):
             yield part
 
 
-def static_file(filename, root, mimetype="auto", download=False, charset="UTF-8"):
+def static_file(
+    filename, root, mimetype="auto", download=False, charset="UTF-8"
+):
     """ Open a file in a safe way and return :exc:`HTTPResponse` with status
         code 200, 305, 403 or 404. The ``Content-Type``, ``Content-Encoding``,
         ``Content-Length`` and ``Last-Modified`` headers are set if possible.
@@ -2596,7 +2642,9 @@ def static_file(filename, root, mimetype="auto", download=False, charset="UTF-8"
         ims = parse_date(ims.split(";")[0].strip())
     if ims is not None:
         if ims >= int(stats.st_mtime):
-            headers["Date"] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+            headers["Date"] = time.strftime(
+                "%a, %d %b %Y %H:%M:%S GMT", time.gmtime()
+            )
             return HTTPResponse(status=304, **headers)
     body = "" if request.method == "HEAD" else open(filename, "rb")
     headers["Accept-Ranges"] = "bytes"
@@ -2694,13 +2742,17 @@ def _parse_qsl(qs):
 def _lscmp(a, b):
     """ Compares two strings in a cryptographically safe way:
         Runtime is not affected by length of common prefix. """
-    return not sum((0 if x == y else 1 for x, y in zip(a, b))) and len(a) == len(b)
+    return not sum((0 if x == y else 1 for x, y in zip(a, b))) and len(
+        a
+    ) == len(b)
 
 
 def cookie_encode(data, key):
     """ Encode and sign a pickle-able object. Return a (byte) string """
     msg = base64.b64encode(pickle.dumps(data, -1))
-    sig = base64.b64encode(hmac.new((tob(key)), msg, digestmod=(hashlib.md5)).digest())
+    sig = base64.b64encode(
+        hmac.new((tob(key)), msg, digestmod=(hashlib.md5)).digest()
+    )
     return tob("!") + sig + tob("?") + msg
 
 
@@ -2853,7 +2905,9 @@ class ServerAdapter(object):
         pass
 
     def __repr__(self):
-        args = ", ".join(["%s=%s" % (k, repr(v)) for k, v in self.options.items()])
+        args = ", ".join(
+            ["%s=%s" % (k, repr(v)) for k, v in self.options.items()]
+        )
         return "%s(%s)" % (self.__class__.__name__, args)
 
 
@@ -2940,7 +2994,9 @@ class PasteServer(ServerAdapter):
         from paste.translogger import TransLogger
 
         handler = TransLogger(handler, setup_console_handler=(not self.quiet))
-        (httpserver.serve)(handler, host=self.host, port=str(self.port), **self.options)
+        (httpserver.serve)(
+            handler, host=self.host, port=str(self.port), **self.options
+        )
 
 
 class MeinheldServer(ServerAdapter):
@@ -2952,7 +3008,9 @@ class MeinheldServer(ServerAdapter):
 
 
 class FapwsServer(ServerAdapter):
-    __doc__ = " Extremely fast webserver using libev. See http://www.fapws.org/ "
+    __doc__ = (
+        " Extremely fast webserver using libev. See http://www.fapws.org/ "
+    )
 
     def run(self, handler):
         import fapws._evwsgi as evwsgi
@@ -3055,7 +3113,9 @@ class GeventSocketIOServer(ServerAdapter):
         from socketio import server
 
         address = (self.host, self.port)
-        (server.SocketIOServer)(address, handler, **self.options).serve_forever()
+        (server.SocketIOServer)(
+            address, handler, **self.options
+        ).serve_forever()
 
 
 class GunicornServer(ServerAdapter):
@@ -3085,7 +3145,9 @@ class EventletServer(ServerAdapter):
 
         try:
             wsgi.server(
-                (listen((self.host, self.port))), handler, log_output=(not self.quiet)
+                (listen((self.host, self.port))),
+                handler,
+                log_output=(not self.quiet),
             )
         except TypeError:
             wsgi.server(listen((self.host, self.port)), handler)
@@ -3229,7 +3291,9 @@ def run(
             try:
                 try:
                     lockfile = None
-                    fd, lockfile = tempfile.mkstemp(prefix="bottle.", suffix=".lock")
+                    fd, lockfile = tempfile.mkstemp(
+                        prefix="bottle.", suffix=".lock"
+                    )
                     os.close(fd)
                     while os.path.exists(lockfile):
                         args = [sys.executable] + sys.argv
@@ -3364,7 +3428,9 @@ class BaseTemplate(object):
     settings = {}
     defaults = {}
 
-    def __init__(self, source=None, name=None, lookup=[], encoding="utf8", **settings):
+    def __init__(
+        self, source=None, name=None, lookup=[], encoding="utf8", **settings
+    ):
         """ Create a new template.
         If the source parameter (str or buffer) is missing, the name argument
         is used to guess a template filename. Subclasses can assume that
@@ -3522,7 +3588,9 @@ class Jinja2Template(BaseTemplate):
 
 
 class SimpleTemplate(BaseTemplate):
-    def prepare(self, escape_func=html_escape, noescape=False, syntax=None, **ka):
+    def prepare(
+        self, escape_func=html_escape, noescape=False, syntax=None, **ka
+    ):
         self.cache = {}
         enc = self.encoding
         self._str = lambda x: touni(x, enc)
@@ -3622,11 +3690,15 @@ class StplParser(object):
     _re_tok += "|([\\[\\{\\(])"
     _re_tok += "|([\\]\\}\\)])"
     _re_tok += "|^([ \\t]*(?:if|for|while|with|try|def|class)\\b)|^([ \\t]*(?:elif|else|except|finally)\\b)"
-    _re_tok += "|((?:^|;)[ \\t]*end[ \\t]*(?=(?:%(block_close)s[ \\t]*)?\\r?$|;|#))"
+    _re_tok += (
+        "|((?:^|;)[ \\t]*end[ \\t]*(?=(?:%(block_close)s[ \\t]*)?\\r?$|;|#))"
+    )
     _re_tok += "|(%(block_close)s[ \\t]*(?=\\r?$))"
     _re_tok += "|(\\r?\\n)"
     _re_split = "(?m)^[ \t]*(\\\\?)((%(line_start)s)|(%(block_start)s))(%%?)"
-    _re_inl = "(?m)%%(inline_start)s((?:%s|[^'\"\n]*?)+)%%(inline_end)s" % _re_inl
+    _re_inl = (
+        "(?m)%%(inline_start)s((?:%s|[^'\"\n]*?)+)%%(inline_end)s" % _re_inl
+    )
     _re_tok = "(?m)" + _re_tok
     default_syntax = "<% %> % {{ }}"
 
@@ -3667,13 +3739,17 @@ class StplParser(object):
                 self.offset += m.end()
                 if m.group(1):
                     line, sep, _ = self.source[self.offset :].partition("\n")
-                    self.text_buffer.append(m.group(2) + m.group(5) + line + sep)
+                    self.text_buffer.append(
+                        m.group(2) + m.group(5) + line + sep
+                    )
                     self.offset += len(line + sep) + 1
                     continue
                 else:
                     if m.group(5):
                         depr("Escape code lines with a backslash.")
-                        line, sep, _ = self.source[self.offset :].partition("\n")
+                        line, sep, _ = self.source[self.offset :].partition(
+                            "\n"
+                        )
                         self.text_buffer.append(m.group(2) + line + sep)
                         self.offset += len(line + sep) + 1
                         continue
@@ -3735,7 +3811,9 @@ class StplParser(object):
                                             else:
                                                 code_line += _cend
                                         else:
-                                            self.write_code(code_line.strip(), comment)
+                                            self.write_code(
+                                                code_line.strip(), comment
+                                            )
                                             self.lineno += 1
                                             code_line, comment, self.indent_mod = (
                                                 "",
@@ -3799,9 +3877,13 @@ class StplParser(object):
                 if "coding" in comment:
                     m = re.match("#.*coding[:=]\\s*([-\\w.]+)", comment)
                     if m:
-                        depr("PEP263 encoding strings in templates are deprecated.")
+                        depr(
+                            "PEP263 encoding strings in templates are deprecated."
+                        )
                         enc = m.group(1)
-                        self.source = self.source.encode(self.encoding).decode(enc)
+                        self.source = self.source.encode(self.encoding).decode(
+                            enc
+                        )
                         self.encoding = enc
                         return (line, comment.replace("coding", "coding*"))
             return (line, comment)
@@ -3826,7 +3908,9 @@ def template(*args, **kwargs):
                 (TEMPLATES[tplid].prepare)(**settings)
         else:
             if "\n" in tpl or "{" in tpl or "%" in tpl or "$" in tpl:
-                TEMPLATES[tplid] = adapter(source=tpl, lookup=lookup, **settings)
+                TEMPLATES[tplid] = adapter(
+                    source=tpl, lookup=lookup, **settings
+                )
             else:
                 TEMPLATES[tplid] = adapter(name=tpl, lookup=lookup, **settings)
     if not TEMPLATES[tplid]:
@@ -3884,7 +3968,9 @@ HTTP_CODES[428] = "Precondition Required"
 HTTP_CODES[429] = "Too Many Requests"
 HTTP_CODES[431] = "Request Header Fields Too Large"
 HTTP_CODES[511] = "Network Authentication Required"
-_HTTP_STATUS_LINES = dict(((k, "%d %s" % (k, v)) for k, v in HTTP_CODES.items()))
+_HTTP_STATUS_LINES = dict(
+    ((k, "%d %s" % (k, v)) for k, v in HTTP_CODES.items())
+)
 ERROR_PAGE_TEMPLATE = (
     '\n%%try:\n    %%from %s import DEBUG, HTTP_CODES, request, touni\n    <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">\n    <html>\n        <head>\n            <title>Error: {{e.status}}</title>\n            <style type="text/css">\n              html {background-color: #eee; font-family: sans;}\n              body {background-color: #fff; border: 1px solid #ddd;\n                    padding: 15px; margin: 15px;}\n              pre {background-color: #eee; border: 1px solid #ddd; padding: 5px;}\n            </style>\n        </head>\n        <body>\n            <h1>Error: {{e.status}}</h1>\n            <p>Sorry, the requested URL <tt>{{repr(request.url)}}</tt>\n               caused an error:</p>\n            <pre>{{e.body}}</pre>\n            %%if DEBUG and e.exception:\n              <h2>Exception:</h2>\n              <pre>{{repr(e.exception)}}</pre>\n            %%end\n            %%if DEBUG and e.traceback:\n              <h2>Traceback:</h2>\n              <pre>{{e.traceback}}</pre>\n            %%end\n        </body>\n    </html>\n%%except ImportError:\n    <b>ImportError:</b> Could not generate the error page. Please add bottle to\n    the import path.\n%%end\n'
     % __name__

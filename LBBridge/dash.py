@@ -56,10 +56,18 @@ class Dashboard:
 
     def __start_color(self):
         curses.start_color()
-        curses.init_pair(STATUS.none.value, curses.COLOR_WHITE, curses.COLOR_BLACK)
-        curses.init_pair(STATUS.ok.value, curses.COLOR_GREEN, curses.COLOR_BLACK)
-        curses.init_pair(STATUS.warn.value, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(STATUS.error.value, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(
+            STATUS.none.value, curses.COLOR_WHITE, curses.COLOR_BLACK
+        )
+        curses.init_pair(
+            STATUS.ok.value, curses.COLOR_GREEN, curses.COLOR_BLACK
+        )
+        curses.init_pair(
+            STATUS.warn.value, curses.COLOR_YELLOW, curses.COLOR_BLACK
+        )
+        curses.init_pair(
+            STATUS.error.value, curses.COLOR_RED, curses.COLOR_BLACK
+        )
 
     def run(self):
         self.line = 0

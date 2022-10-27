@@ -9,7 +9,11 @@ from pathlib import Path
 import uuid
 from . import log
 
-CONFIG_DEFAULTS = {"device_type": "ruida", "laser_ip": "10.0.3.3", "ap_name": None}
+CONFIG_DEFAULTS = {
+    "device_type": "ruida",
+    "laser_ip": "10.0.3.3",
+    "ap_name": None,
+}
 
 
 class Config:
@@ -27,7 +31,9 @@ class Config:
         data = {}
         load_fail = False
         if not self._Config__path.exists():
-            log.warning(f"{self._Config__path} does not exist! Setting to defaults.")
+            log.warning(
+                f"{self._Config__path} does not exist! Setting to defaults."
+            )
         else:
             with open(self._Config__path, "r") as f:
                 try:
