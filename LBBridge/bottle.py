@@ -1,11 +1,5 @@
-# decompyle3 version 3.9.0
-# Python bytecode version base 3.7.0 (3394)
-# Decompiled from: Python 3.10.3 (main, Jul 25 2022, 17:09:16) [Clang 13.0.0 (clang-1300.0.27.3)]
-# Embedded file name: /boot/LBBridge/LBBridge/bottle.py
-# Compiled at: 2021-09-13 10:26:38
-# Size of source mod 2**32: 150564 bytes
-__doc__ = '\nBottle is a fast and simple micro-framework for small web applications. It\noffers request dispatching (Routes) with url parameter support, templates,\na built-in HTTP Server and adapters for many third party WSGI/HTTP-server and\ntemplate engines - all in a single file and with no dependencies other than the\nPython Standard Library.\n\nHomepage and documentation: http://bottlepy.org/\n\nCopyright (c) 2016, Marcel Hellkamp.\nLicense: MIT (see LICENSE for details)\n'
 from __future__ import with_statement
+__doc__ = '\nBottle is a fast and simple micro-framework for small web applications. It\noffers request dispatching (Routes) with url parameter support, templates,\na built-in HTTP Server and adapters for many third party WSGI/HTTP-server and\ntemplate engines - all in a single file and with no dependencies other than the\nPython Standard Library.\n\nHomepage and documentation: http://bottlepy.org/\n\nCopyright (c) 2016, Marcel Hellkamp.\nLicense: MIT (see LICENSE for details)\n'
 __author__ = 'Marcel Hellkamp'
 __version__ = '0.12.19'
 __license__ = 'MIT'
